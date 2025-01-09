@@ -41,29 +41,26 @@ git clone https://github.com/yourusername/GameShelf-NodeJS.git
 cd GameShelf-NodeJS
 ```
 
-2. Create `.env` files in both the root, client, and server directories using the provided templates:
+2. Create a `.env` file in the root directory using the provided template:
 
 ```env
-# server/.env
+# Hasura Configuration
+REACT_APP_HASURA_ENDPOINT=your_hasura_endpoint
+REACT_APP_HASURA_ADMIN_KEY=your_hasura_admin_key
+
+# IGDB/Twitch API Configuration
 TWITCH_CLIENT_ID=your_twitch_client_id
 TWITCH_CLIENT_KEY=your_twitch_client_key
 IGDB_ACCESS_SECRET=your_igdb_access_token
 
-# client/.env
-REACT_APP_HASURA_ENDPOINT=your_hasura_endpoint
-REACT_APP_HASURA_ADMIN_KEY=your_hasura_admin_key
+# Server Configuration
+PORT=5000
 ```
 
 3. Install dependencies:
 ```bash
-# Install root dependencies
-npm install
-
-# Install client dependencies
-cd client && npm install
-
-# Install server dependencies
-cd ../server && npm install
+# Install all dependencies (client and server)
+npm run install:all
 ```
 
 ## Development

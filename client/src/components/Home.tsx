@@ -2,12 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@apollo/client';
 import { GET_DATA } from '../queries';
-import { Game } from '../types/game';
+import { Game, GameStatus } from '../types/game';
 
 const Home: React.FC = () => {
     const { loading, error, data } = useQuery(GET_DATA);
 
-    const getStatusCount = (status: string) => {
+    const getStatusCount = (status: GameStatus) => {
         if (!data?.Games) return 0;
         return data.Games.filter((game: Game) => game.status === status).length;
     };
@@ -16,9 +16,9 @@ const Home: React.FC = () => {
     if (error) return <div>Error: {error.message}</div>;
 
     const totalGames = data.Games.length;
-    const playingGames = getStatusCount('PLAYING');
+    const playingGames = getStatusCount('IN_PROGRESS');
     const completedGames = getStatusCount('COMPLETED');
-    const backlogGames = getStatusCount('BACKLOG');
+    const notStartedGames = getStatusCount('NOT_STARTED');
 
     return (
         <div className="space-y-8">
@@ -41,8 +41,8 @@ const Home: React.FC = () => {
                     <p className="text-gray-400">Completed</p>
                 </div>
                 <div className="bg-dark p-6 rounded-lg text-center">
-                    <h3 className="text-2xl font-bold text-yellow-500">{backlogGames}</h3>
-                    <p className="text-gray-400">In Backlog</p>
+                    <h3 className="text-2xl font-bold text-yellow-500">{notStartedGames}</h3>
+                    <p className="text-gray-400">Not Started</p>
                 </div>
             </div>
 

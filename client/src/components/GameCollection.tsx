@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation } from '@apollo/client';
-import { GET_DATA, DELETE_GAME, UPDATE_GAME } from '../queries';
+import { GET_DATA, DELETE_GAME, UPDATE_GAME_STATUS } from '../queries';
 import GameCard from './GameCard';
-import EditGameModal from './EditGameModal';
-import { Game, GameUpdate } from '../types/game';
+import { Game, GameStatus } from '../types/game';
 import GameStats from './GameStats';
 
 type SortField = 'name' | 'status' | 'year';
@@ -14,43 +13,134 @@ interface SortConfig {
     order: SortOrder;
 }
 
+interface DropdownMenuProps {
+    onDelete: () => void;
+}
+
+const DropdownMenu: React.FC<DropdownMenuProps> = ({ onDelete }) => {
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+        <div className="relative">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="p-1 hover:bg-gray-700 rounded-full transition-colors"
+            >
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+                </svg>
+            </button>
+            
+            {isOpen && (
+                <>
+                    <div 
+                        className="fixed inset-0" 
+                        onClick={() => setIsOpen(false)}
+                    />
+                    <div className="absolute right-0 mt-2 w-48 bg-dark-light rounded-lg shadow-lg z-50 py-1">
+                        <button
+                            onClick={() => {
+                                onDelete();
+                                setIsOpen(false);
+                            }}
+                            className="w-full text-left px-4 py-2 text-red-500 hover:bg-gray-700 transition-colors"
+                        >
+                            Delete
+                        </button>
+                    </div>
+                </>
+            )}
+        </div>
+    );
+};
+
 const GameCollection: React.FC = () => {
     const [sortConfig, setSortConfig] = useState<SortConfig>({
         field: 'name',
         order: 'asc'
     });
 
-    const [localGames, setLocalGames] = useState<Game[]>([]);
     const { loading, error, data } = useQuery(GET_DATA, {
         variables: {
             orderBy: { [sortConfig.field]: sortConfig.order }
         },
-        pollInterval: 1000,
-        fetchPolicy: 'network-only',
-        nextFetchPolicy: 'cache-first',
-        onCompleted: (data) => setLocalGames(data.Games)
+        fetchPolicy: 'cache-and-network'
     });
 
     const [deleteGame] = useMutation(DELETE_GAME, {
-        refetchQueries: [{
-            query: GET_DATA,
-            variables: {
-                orderBy: { [sortConfig.field]: sortConfig.order }
+        update(cache, { data: { delete_Games_by_pk } }) {
+            const existingData = cache.readQuery<{ Games: Game[] }>({ query: GET_DATA });
+            if (existingData) {
+                cache.writeQuery({
+                    query: GET_DATA,
+                    data: {
+                        Games: existingData.Games.filter(game => game.id !== delete_Games_by_pk.id)
+                    }
+                });
             }
-        }],
-        awaitRefetchQueries: true
-    });
-    const [updateGame] = useMutation(UPDATE_GAME, {
-        refetchQueries: [{ query: GET_DATA }]
+        }
     });
 
-    const [editingGame, setEditingGame] = React.useState<Game | null>(null);
+    const [updateGameStatus] = useMutation(UPDATE_GAME_STATUS, {
+        update(cache, { data: { update_Games_by_pk } }) {
+            const existingData = cache.readQuery<{ Games: Game[] }>({ 
+                query: GET_DATA,
+                variables: { orderBy: { [sortConfig.field]: sortConfig.order } }
+            });
+            if (existingData) {
+                const updatedGames = existingData.Games.map(game =>
+                    game.id === update_Games_by_pk.id ? { ...game, ...update_Games_by_pk } : game
+                );
+                cache.writeQuery({
+                    query: GET_DATA,
+                    variables: { orderBy: { [sortConfig.field]: sortConfig.order } },
+                    data: { Games: updatedGames }
+                });
+            }
+        }
+    });
 
     const handleSort = (field: SortField) => {
         setSortConfig(prev => ({
             field,
             order: prev.field === field && prev.order === 'asc' ? 'desc' : 'asc'
         }));
+    };
+
+    const handleDelete = async (id: number) => {
+        try {
+            await deleteGame({
+                variables: { id },
+                optimisticResponse: {
+                    delete_Games_by_pk: {
+                        id,
+                        __typename: 'Games'
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error deleting game:', error);
+        }
+    };
+
+    const handleStatusChange = async (gameId: number, newStatus: GameStatus) => {
+        try {
+            await updateGameStatus({
+                variables: {
+                    id: gameId,
+                    status: newStatus
+                },
+                optimisticResponse: {
+                    update_Games_by_pk: {
+                        id: gameId,
+                        status: newStatus,
+                        __typename: 'Games'
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error updating game status:', error);
+        }
     };
 
     const SortButton: React.FC<{ field: SortField; label: string }> = ({ field, label }) => (
@@ -77,45 +167,7 @@ const GameCollection: React.FC = () => {
     if (loading) return <div>Loading...</div>;
     if (error) return <div>Error: {error.message}</div>;
 
-    const handleDelete = async (id: number) => {
-        try {
-            await deleteGame({
-                variables: { id },
-                optimisticResponse: {
-                    delete_Games_by_pk: {
-                        id: id,
-                        __typename: 'Games'
-                    }
-                }
-            });
-        } catch (error) {
-            console.error('Error deleting game:', error);
-        }
-    };
-
-    const handleEdit = (game: Game) => {
-        setEditingGame(game);
-    };
-
-    const handleUpdate = async (id: number, updates: GameUpdate) => {
-        try {
-            await updateGame({
-                variables: {
-                    id,
-                    ...updates
-                }
-            });
-            setEditingGame(null);
-        } catch (error) {
-            console.error('Error updating game:', error);
-        }
-    };
-
-    const updateLocalGameStatus = (gameId: number, newStatus: HasuraGameStatus) => {
-        setLocalGames(prev => prev.map(game => 
-            game.id === gameId ? { ...game, status: newStatus } : game
-        ));
-    };
+    const games = data?.Games || [];
 
     return (
         <div className="space-y-6">
@@ -129,41 +181,20 @@ const GameCollection: React.FC = () => {
                 </div>
             </div>
             
-            <GameStats games={localGames} />
+            <GameStats games={games} />
             
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-1 gap-y-4 max-w-[1600px] mx-auto">
-                {localGames.map((game: Game) => (
+                {games.map((game: Game) => (
                     <GameCard
                         key={game.id}
                         game={game}
-                        onStatusChange={(status) => updateLocalGameStatus(game.id, status)}
+                        onStatusChange={(status) => handleStatusChange(game.id, status)}
                         actions={
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => handleEdit(game)}
-                                    className="btn bg-primary-500 hover:bg-primary-600 transition-colors flex-1"
-                                >
-                                    Edit
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(game.id)}
-                                    className="btn bg-red-500 hover:bg-red-600 transition-colors flex-1"
-                                >
-                                    Delete
-                                </button>
-                            </div>
+                            <DropdownMenu onDelete={() => handleDelete(game.id)} />
                         }
                     />
                 ))}
             </div>
-
-            {editingGame && (
-                <EditGameModal
-                    game={editingGame}
-                    onClose={() => setEditingGame(null)}
-                    onSave={handleUpdate}
-                />
-            )}
         </div>
     );
 };

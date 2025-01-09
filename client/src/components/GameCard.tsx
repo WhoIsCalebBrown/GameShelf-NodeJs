@@ -15,7 +15,6 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions }) => {
         refetchQueries: [{ query: GET_DATA }]
     });
 
-    // Update local state when prop changes
     useEffect(() => {
         setLocalStatus(game.status);
     }, [game.status]);
@@ -70,11 +69,16 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions }) => {
                 {/* Title and Year on same line */}
                 <div className="flex items-center justify-between mb-3">
                     <h3 className="font-bold text-lg truncate pr-4 flex-1">{game.name}</h3>
-                    {game.year && (
-                        <span className="text-sm text-text-secondary whitespace-nowrap">
-                            {game.year}
-                        </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {game.year && (
+                            <span className="text-sm text-text-secondary whitespace-nowrap">
+                                {game.year}
+                            </span>
+                        )}
+                        {actions && (
+                            <div className="ml-2">{actions}</div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Status Selector */}
@@ -94,19 +98,12 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions }) => {
                     <option value="WANT_TO_PLAY">Want to Play</option>
                 </select>
 
-                {/* Description - Fill available space */}
+                {/* Description */}
                 <div className="flex-1 overflow-hidden mb-4">
                     <div className="text-sm text-text-secondary line-clamp-4">
                         {game.description || 'No description available.'}
                     </div>
                 </div>
-
-                {/* Actions Section - Aligned with bottom of image */}
-                {actions && (
-                    <div className="flex gap-2 absolute bottom-4 left-4 right-4">
-                        {actions}
-                    </div>
-                )}
             </div>
         </div>
     );
