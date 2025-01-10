@@ -1,123 +1,111 @@
-# GameShelf
+# 🎮 GameShelf
 
-A modern web application for tracking and managing your video game collection. Built with React, TypeScript, and Hasura GraphQL.
+A modern web application to track your video game collection, progress, and competitive stats.
 
-## Features
+## ✨ Features
 
-- 🎮 Search and add games from IGDB database
-- 📊 Track game completion status
-- 📈 Visual statistics of your gaming progress
-- 🖼️ Beautiful game cards with cover art
-- 🔄 Real-time updates
-- 📱 Responsive design
+### 📚 Game Collection Management
+- 🔍 Search and add games from IGDB database
+- 📊 Track game status:
+  - 🆕 Not Started
+  - ▶️ In Progress
+  - ✅ Completed
+  - ⏸️ On Hold
+  - 🛑 Dropped
+  - 💫 Want to Play
+- 🔥 View trending games
+- 🗑️ Delete games from collection
 
-## Tech Stack
+### 📈 Progress Tracking
+- ⏱️ Track playtime (hours and minutes)
+- 📊 Track completion percentage
+- 📝 Add personal notes
+- 📅 Record last played date
 
-- **Frontend:**
-  - React 18
-  - TypeScript
-  - Apollo Client
-  - TailwindCSS
-  - React Router
+### 🏆 Competitive Game Features
+- 🎯 Toggle games as competitive
+- 🏅 Track current and peak ranks
+- 🎮 Supports various ranking systems:
 
-- **Backend:**
-  - Node.js
-  - Express
-  - Hasura GraphQL
-  - IGDB API
+#### 🎖️ Standard Ranks
+- Iron
+- Bronze (br)
+- Silver (silv)
+- Gold
+- Platinum (plat)
+- Diamond (dia)
+- Ascendant
+- Immortal (imm)
+- Radiant (rad)
+- Champion (champ)
+- Grand Champion (gc)
+- Master (mas)
+- Grandmaster (gm)
+- Legend (leg)
 
-## Prerequisites
+#### 🎯 Overwatch SR System
+- Bronze (1-1499 SR)
+- Silver (1500-1999 SR)
+- Gold (2000-2499 SR)
+- Platinum (2500-2999 SR)
+- Diamond (3000-3499 SR)
+- Master (3500-3999 SR)
+- Grandmaster (4000-4899 SR)
+- Top 500 (4900+ SR)
+- Supports shorthand: "t500", "top500"
 
-- Node.js (v14 or higher)
-- npm or yarn
-- IGDB API credentials
-- Hasura instance
+#### 📊 Letter Grade System
+- S/S+ (Gold)
+- A/A+ (Red)
+- B/B+ (Purple)
+- C/C+ (Blue)
+- D/D+ (Green)
+- F (Gray)
 
-## Environment Setup
+## 🚀 Setup
 
-1. Clone the repository:
+1. Clone the repository
 ```bash
 git clone https://github.com/yourusername/GameShelf-NodeJS.git
 cd GameShelf-NodeJS
 ```
 
-2. Create a `.env` file in the root directory using the provided template:
+2. Install dependencies
+```bash
+# Install server dependencies
+cd server
+npm install
+cd ../
+# Install client dependencies
+cd client
+npm install
+cd ../
+```
 
+3. Set up environment variables
+Create a `.env` file in the root directory with:
 ```env
-# Hasura Configuration
-REACT_APP_HASURA_ENDPOINT=your_hasura_endpoint
-REACT_APP_HASURA_ADMIN_KEY=your_hasura_admin_key
-
-# IGDB/Twitch API Configuration
-TWITCH_CLIENT_ID=your_twitch_client_id
-TWITCH_CLIENT_KEY=your_twitch_client_key
-IGDB_ACCESS_SECRET=your_igdb_access_token
-
-# Server Configuration
-PORT=5000
+IGDB_CLIENT_ID=your_igdb_client_id
+IGDB_CLIENT_SECRET=your_igdb_client_secret
+HASURA_ADMIN_SECRET=your_hasura_admin_secret
 ```
 
-3. Install dependencies:
+4. Start the development servers and the client
 ```bash
-# Install all dependencies (client and server)
-npm run install:all
-```
-
-## Development
-
-1. Start the development server:
-```bash
-# From the root directory
+# Start the Node.js server
 npm run dev
-```
 
-This will start both the client (React) and server (Node.js) in development mode.
+## 🛠️ Tech Stack
+- 🌐 Frontend: React with TypeScript
+- 🖥️ Backend: Node.js
+- 💾 Database: PostgreSQL with Hasura GraphQL
+- 🎮 Game Data: IGDB API
+- 🎨 Styling: Tailwind CSS
 
-- Client runs on: http://localhost:3000
-- Server runs on: http://localhost:5000
+## 🤝 Contributing
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
-## Building for Production
-
-```bash
-# Build the client
-cd client && npm run build
-
-# Build the server
-cd ../server && npm run build
-```
-
-## Project Structure
-
-```
-GameShelf-NodeJS/
-├── client/                 # React frontend
-│   ├── src/
-│   │   ├── components/    # React components
-│   │   ├── services/      # API services
-│   │   ├── types/        # TypeScript types
-│   │   └── queries.ts    # GraphQL queries
-│   └── public/
-├── server/                # Node.js backend
-│   └── src/
-│       ├── routes/       # API routes
-│       └── index.ts      # Server entry point
-└── package.json          # Root package.json
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
+## 🙏 Acknowledgments
 - [IGDB](https://www.igdb.com/) for their comprehensive video game database
 - [Hasura](https://hasura.io/) for the GraphQL engine
 - [TailwindCSS](https://tailwindcss.com/) for the styling system
