@@ -64,21 +64,33 @@ const GameCollection: React.FC = () => {
         variables: {
             orderBy: { [sortConfig.field]: sortConfig.order }
         },
-        fetchPolicy: 'cache-first'
+        fetchPolicy: 'cache-and-network',
+        nextFetchPolicy: 'cache-first'
     });
 
     const [deleteGame] = useMutation(DELETE_GAME, {
         update(cache, { data: { delete_Games_by_pk } }) {
-            const existingData = cache.readQuery<{ Games: Game[] }>({ query: GET_DATA });
+            const existingData = cache.readQuery<{ Games: Game[] }>({
+                query: GET_DATA,
+                variables: { orderBy: { [sortConfig.field]: sortConfig.order } }
+            });
             if (existingData) {
+                const updatedGames = existingData.Games.filter(
+                    game => game.id !== delete_Games_by_pk.id
+                );
                 cache.writeQuery({
                     query: GET_DATA,
-                    data: {
-                        Games: existingData.Games.filter(game => game.id !== delete_Games_by_pk.id)
-                    }
+                    variables: { orderBy: { [sortConfig.field]: sortConfig.order } },
+                    data: { Games: updatedGames }
                 });
             }
-        }
+        },
+        optimisticResponse: (vars) => ({
+            delete_Games_by_pk: {
+                id: vars.id,
+                __typename: 'Games'
+            }
+        })
     });
 
     const [updateGameStatus] = useMutation(UPDATE_GAME_STATUS, {
@@ -110,13 +122,7 @@ const GameCollection: React.FC = () => {
     const handleDelete = async (id: number) => {
         try {
             await deleteGame({
-                variables: { id },
-                optimisticResponse: {
-                    delete_Games_by_pk: {
-                        id,
-                        __typename: 'Games'
-                    }
-                }
+                variables: { id }
             });
         } catch (error) {
             console.error('Error deleting game:', error);
@@ -164,9 +170,6 @@ const GameCollection: React.FC = () => {
         </button>
     );
 
-    if (loading) return <div>Loading...</div>;
-    if (error) return <div>Error: {error.message}</div>;
-
     const games = data?.Games || [];
 
     return (
@@ -183,19 +186,31 @@ const GameCollection: React.FC = () => {
             
             <GameStats games={games} />
             
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-w-[1600px] mx-auto">
-                {games.map((game: Game) => (
-                    <div key={game.id} className="transition-all duration-300 ease-in-out">
-                        <GameCard
-                            game={game}
-                            onStatusChange={(status) => handleStatusChange(game.id, status)}
-                            actions={
-                                <DropdownMenu onDelete={() => handleDelete(game.id)} />
-                            }
-                        />
+            {loading ? (
+                <div className="bg-dark p-8 rounded-lg">
+                    <div className="animate-pulse flex items-center justify-center">
+                        <div className="text-lg text-gray-400">Loading games...</div>
                     </div>
-                ))}
-            </div>
+                </div>
+            ) : error ? (
+                <div className="bg-dark p-8 rounded-lg">
+                    <div className="text-red-500">Error: {error.message}</div>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-w-[1600px] mx-auto">
+                    {games.map((game: Game) => (
+                        <div key={game.id} className="transition-all duration-300 ease-in-out">
+                            <GameCard
+                                game={game}
+                                onStatusChange={(status) => handleStatusChange(game.id, status)}
+                                actions={
+                                    <DropdownMenu onDelete={() => handleDelete(game.id)} />
+                                }
+                            />
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };

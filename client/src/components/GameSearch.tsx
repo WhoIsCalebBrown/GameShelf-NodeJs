@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { searchGames } from '../services/igdb';
 import { useMutation } from '@apollo/client';
 import { ADD_GAME, GET_DATA } from '../queries';
+import { Game } from '../types/game';
 
 interface IGDBGame {
     id: number;
@@ -89,7 +90,22 @@ const GameSearch: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     const [addGame] = useMutation(ADD_GAME, {
-        refetchQueries: [{ query: GET_DATA }],
+        update(cache, { data: { insert_Games_one } }) {
+            const existingData = cache.readQuery<{ Games: Game[] }>({
+                query: GET_DATA,
+                variables: { orderBy: { name: 'asc' } }
+            });
+
+            if (existingData) {
+                cache.writeQuery({
+                    query: GET_DATA,
+                    variables: { orderBy: { name: 'asc' } },
+                    data: {
+                        Games: [...existingData.Games, insert_Games_one]
+                    }
+                });
+            }
+        },
         onError: (error) => {
             setError(`Failed to add game: ${error.message}`);
         }

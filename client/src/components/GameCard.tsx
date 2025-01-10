@@ -67,10 +67,10 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions }) => {
             {/* Content Section */}
             <div className="flex-1 p-4 flex flex-col relative max-w-[500px]">
                 {/* Header Section */}
-                <div className="relative mb-2">
+                <div className="relative">
                     {/* Title */}
                     <div className="pr-20">
-                        <h3 className="font-bold text-lg line-clamp-1">{game.name}</h3>
+                        <h3 className="font-bold text-lg leading-tight min-h-[56px]">{game.name}</h3>
                     </div>
                     {/* Year and Actions - Absolute positioned */}
                     <div className="absolute top-0 right-0 flex items-center gap-2">
@@ -91,7 +91,7 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions }) => {
                 <select
                     value={localStatus || ''}
                     onChange={(e) => handleStatusChange(e.target.value as HasuraGameStatus)}
-                    className={`bg-dark/90 border border-gray-700 rounded-lg px-3 py-1.5 text-sm w-fit ${
+                    className={`bg-dark/90 border border-gray-700 rounded-lg px-3 py-1.5 text-sm w-fit -mt-2 ${
                         statusColors[localStatus as HasuraGameStatus] || 'text-gray-400'
                     }`}
                 >
