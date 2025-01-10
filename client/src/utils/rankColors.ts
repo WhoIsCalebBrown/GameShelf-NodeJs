@@ -1,68 +1,3 @@
-// Common rank patterns and their colors
-const RANK_PATTERNS = [
-    // Numbered Tiers (e.g., "Diamond 2", "Gold 3")
-    {
-        pattern: /^(Iron|Bronze|Silver|Gold|Platinum|Diamond|Master|Grandmaster|Challenger)\s*\d*/i,
-        getColor: (rank: string) => {
-            const tier = rank.split(/\s+/)[0].toLowerCase();
-            switch (tier) {
-                case 'iron': return 'text-gray-400';
-                case 'bronze': return 'text-amber-600';
-                case 'silver': return 'text-gray-300';
-                case 'gold': return 'text-yellow-500';
-                case 'platinum': return 'text-cyan-300';
-                case 'diamond': return 'text-blue-400';
-                case 'master': return 'text-purple-500';
-                case 'grandmaster': return 'text-red-500';
-                case 'challenger': return 'text-purple-600';
-                default: return 'text-gray-400';
-            }
-        }
-    },
-    // CS:GO/Valorant Style
-    {
-        pattern: /^(Silver|Gold|Master|Global|Immortal|Radiant|Elite)/i,
-        getColor: (rank: string) => {
-            const tier = rank.toLowerCase();
-            if (tier.includes('silver')) return 'text-gray-300';
-            if (tier.includes('gold')) return 'text-yellow-500';
-            if (tier.includes('master')) return 'text-purple-500';
-            if (tier.includes('global')) return 'text-yellow-400';
-            if (tier.includes('immortal')) return 'text-red-500';
-            if (tier.includes('radiant')) return 'text-cyan-400';
-            if (tier.includes('elite')) return 'text-yellow-400';
-            return 'text-gray-400';
-        }
-    },
-    // Numbered Ranks (e.g., "Top 500", "Rank 1")
-    {
-        pattern: /^(Top|Rank)\s*\d+/i,
-        getColor: (rank: string) => {
-            const number = parseInt(rank.match(/\d+/)?.[0] || '0');
-            if (number <= 10) return 'text-red-500';
-            if (number <= 100) return 'text-purple-500';
-            if (number <= 500) return 'text-blue-400';
-            return 'text-cyan-300';
-        }
-    },
-    // Letter Grades (e.g., "S+", "A-")
-    {
-        pattern: /^[SABCDEF][+-]?$/i,
-        getColor: (rank: string) => {
-            const grade = rank.toUpperCase().charAt(0);
-            switch (grade) {
-                case 'S': return 'text-yellow-400';
-                case 'A': return 'text-red-500';
-                case 'B': return 'text-purple-500';
-                case 'C': return 'text-blue-400';
-                case 'D': return 'text-green-500';
-                case 'F': return 'text-gray-400';
-                default: return 'text-gray-400';
-            }
-        }
-    }
-];
-
 export const getRankColor = (rank: string): string => {
     let rankLower = rank.toLowerCase();
 
@@ -109,6 +44,21 @@ export const getRankColor = (rank: string): string => {
     // Check for Overwatch text ranks
     if (rankLower.includes('top 500') || rankLower.includes('top500') || rankLower.includes('t500')) {
         return 'text-yellow-300';
+    }
+
+    // Check for letter grades
+    const letterGradeMatch = rankLower.match(/^([sabcdf])([+-])?$/i);
+    if (letterGradeMatch) {
+        const grade = letterGradeMatch[1].toUpperCase();
+        switch (grade) {
+            case 'S': return 'text-yellow-400';
+            case 'A': return 'text-red-500';
+            case 'B': return 'text-purple-500';
+            case 'C': return 'text-blue-400';
+            case 'D': return 'text-green-500';
+            case 'F': return 'text-gray-400';
+            default: return 'text-gray-400';
+        }
     }
 
     if (rankLower.includes('iron') || rankLower.includes('bronze')) {
