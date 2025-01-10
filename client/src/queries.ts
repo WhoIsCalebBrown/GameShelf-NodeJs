@@ -32,7 +32,7 @@ export const ADD_GAME = gql`
     mutation AddGame(
         $name: String!, 
         $description: String, 
-        $year: String!, 
+        $year: Int!, 
         $igdb_id: Int!, 
         $slug: String!,
         $cover_url: String

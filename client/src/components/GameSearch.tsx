@@ -157,10 +157,10 @@ const GameSearch: React.FC = () => {
                 ? game.cover.url.replace('t_thumb', 't_cover_big')
                 : null;
 
-            // Convert Unix timestamp to ISO date string
+            // Extract just the year from the release date
             const year = game.first_release_date 
-                ? new Date(game.first_release_date * 1000).toISOString().split('T')[0]
-                : new Date().toISOString().split('T')[0];
+                ? new Date(game.first_release_date * 1000).getFullYear()
+                : new Date().getFullYear();
 
             // First, add the game
             const { data: gameData } = await addGame({
