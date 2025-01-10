@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation, NetworkStatus } from '@apollo/client';
 import { GET_DATA, DELETE_GAME, UPDATE_GAME_STATUS } from '../queries';
 import GameCard from './GameCard';
 import { Game, GameStatus } from '../types/game';
@@ -60,12 +60,12 @@ const GameCollection: React.FC = () => {
         order: 'asc'
     });
 
-    const { loading, error, data } = useQuery(GET_DATA, {
+    const { loading, error, data, networkStatus } = useQuery(GET_DATA, {
         variables: {
             orderBy: { [sortConfig.field]: sortConfig.order }
         },
         fetchPolicy: 'cache-and-network',
-        nextFetchPolicy: 'cache-first'
+        notifyOnNetworkStatusChange: true
     });
 
     const [deleteGame] = useMutation(DELETE_GAME, {
@@ -172,6 +172,8 @@ const GameCollection: React.FC = () => {
 
     const games = data?.Games || [];
 
+    const showLoading = loading && networkStatus === NetworkStatus.loading;
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 bg-dark p-4 rounded-lg">
@@ -186,7 +188,7 @@ const GameCollection: React.FC = () => {
             
             <GameStats games={games} />
             
-            {loading ? (
+            {showLoading ? (
                 <div className="bg-dark p-8 rounded-lg">
                     <div className="animate-pulse flex items-center justify-center">
                         <div className="text-lg text-gray-400">Loading games...</div>

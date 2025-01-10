@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { searchGames } from '../services/igdb';
+import React, { useState, useEffect } from 'react';
+import { searchGames, getTrendingGames } from '../services/igdb';
 import { useMutation } from '@apollo/client';
 import { ADD_GAME, GET_DATA } from '../queries';
 import { Game } from '../types/game';
@@ -22,12 +22,6 @@ interface GameCardProps {
 
 const GameCard: React.FC<GameCardProps> = ({ game, onAddGame }) => {
     const [isExpanded, setIsExpanded] = useState(false);
-    
-    const truncateText = (text: string, maxLength: number) => {
-        if (!text) return '';
-        if (text.length <= maxLength) return text;
-        return text.slice(0, maxLength) + '...';
-    };
 
     return (
         <div className="bg-dark-light rounded-lg p-4 flex flex-col h-[400px] relative">
@@ -86,8 +80,25 @@ const GameCard: React.FC<GameCardProps> = ({ game, onAddGame }) => {
 const GameSearch: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState<IGDBGame[]>([]);
+    const [trendingGames, setTrendingGames] = useState<IGDBGame[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [isTrendingLoading, setIsTrendingLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const loadTrendingGames = async () => {
+            try {
+                const games = await getTrendingGames();
+                setTrendingGames(games);
+            } catch (error) {
+                console.error('Error loading trending games:', error);
+            } finally {
+                setIsTrendingLoading(false);
+            }
+        };
+
+        loadTrendingGames();
+    }, []);
 
     const [addGame] = useMutation(ADD_GAME, {
         update(cache, { data: { insert_Games_one } }) {
@@ -152,39 +163,68 @@ const GameSearch: React.FC = () => {
     };
 
     return (
-        <div className="bg-dark rounded-lg p-6 shadow-lg">
-            <div className="flex gap-4 mb-6">
-                <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                    placeholder="Search for games..."
-                    className="form-input flex-1 bg-dark-light border-gray-700 focus:border-primary-500 focus:ring-primary-500"
-                />
-                <button 
-                    onClick={handleSearch}
-                    disabled={isLoading}
-                    className="btn bg-primary-500 hover:bg-primary-600 transition-colors disabled:opacity-50"
-                >
-                    {isLoading ? 'Searching...' : 'Search'}
-                </button>
+        <div className="space-y-8">
+            {/* Search Section */}
+            <div className="bg-dark rounded-lg p-6 shadow-lg">
+                <div className="flex gap-4 mb-6">
+                    <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                        placeholder="Search for games..."
+                        className="form-input flex-1 bg-dark-light border-gray-700 focus:border-primary-500 focus:ring-primary-500"
+                    />
+                    <button 
+                        onClick={handleSearch}
+                        disabled={isLoading}
+                        className="btn bg-primary-500 hover:bg-primary-600 transition-colors disabled:opacity-50"
+                    >
+                        {isLoading ? 'Searching...' : 'Search'}
+                    </button>
+                </div>
+
+                {error && (
+                    <div className="text-red-500 mb-4 p-3 bg-red-500/10 rounded">
+                        {error}
+                    </div>
+                )}
+
+                {searchResults.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {searchResults.map(game => (
+                            <GameCard 
+                                key={game.id} 
+                                game={game} 
+                                onAddGame={handleAddGame}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
 
-            {error && (
-                <div className="text-red-500 mb-4 p-3 bg-red-500/10 rounded">
-                    {error}
-                </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {searchResults.map(game => (
-                    <GameCard 
-                        key={game.id} 
-                        game={game} 
-                        onAddGame={handleAddGame}
-                    />
-                ))}
+            {/* Trending Games Section */}
+            <div className="bg-dark rounded-lg p-6 shadow-lg">
+                <h2 className="text-2xl font-bold mb-6">Trending Games</h2>
+                {isTrendingLoading ? (
+                    <div className="animate-pulse flex items-center justify-center h-32">
+                        <div className="text-lg text-gray-400">Loading trending games...</div>
+                    </div>
+                ) : trendingGames.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {trendingGames.map(game => (
+                            <GameCard 
+                                key={game.id} 
+                                game={game} 
+                                onAddGame={handleAddGame}
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-gray-400 text-center py-8">
+                        No trending games available at the moment.
+                    </div>
+                )}
             </div>
         </div>
     );

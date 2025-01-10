@@ -67,4 +67,29 @@ export const getGameById = async (id: number): Promise<IGDBGame> => {
         console.error('Error fetching game from IGDB:', error);
         throw error;
     }
+};
+
+export const getTrendingGames = async (): Promise<IGDBGame[]> => {
+    try {
+        const response = await fetch('/api/igdb/trending');
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('IGDB API Error:', errorText);
+            throw new Error(`Failed to fetch trending games: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const games: IGDBGame[] = Array.isArray(data) ? data : [];
+        
+        return games.map(game => ({
+            ...game,
+            cover: game.cover ? {
+                url: game.cover.url.replace('t_thumb', 't_cover_big')
+            } : undefined
+        }));
+    } catch (error) {
+        console.error('Error fetching trending games:', error);
+        throw error;
+    }
 }; 
