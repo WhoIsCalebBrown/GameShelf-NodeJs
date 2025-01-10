@@ -12,6 +12,8 @@ export const GET_DATA = gql`
             completion_percentage
             last_played_at
             notes
+            current_rank
+            peak_rank
             game {
                 id
                 name
@@ -20,6 +22,7 @@ export const GET_DATA = gql`
                 igdb_id
                 slug
                 cover_url
+                is_competitive
             }
         }
     }
@@ -29,7 +32,7 @@ export const ADD_GAME = gql`
     mutation AddGame(
         $name: String!, 
         $description: String, 
-        $year: Int!, 
+        $year: String!, 
         $igdb_id: Int!, 
         $slug: String!,
         $cover_url: String
@@ -119,6 +122,58 @@ export const UPDATE_GAME_STATUS = gql`
                 status
                 game_id
             }
+        }
+    }
+`;
+
+export const UPDATE_GAME_PROGRESS = gql`
+    mutation UpdateGameProgress(
+        $userId: Int!,
+        $gameId: Int!,
+        $playtimeMinutes: Int,
+        $completionPercentage: Int,
+        $currentRank: String,
+        $peakRank: String,
+        $notes: String,
+        $lastPlayedAt: timestamptz
+    ) {
+        update_game_progress(
+            where: {
+                user_id: { _eq: $userId },
+                game_id: { _eq: $gameId }
+            },
+            _set: {
+                playtime_minutes: $playtimeMinutes,
+                completion_percentage: $completionPercentage,
+                current_rank: $currentRank,
+                peak_rank: $peakRank,
+                notes: $notes,
+                last_played_at: $lastPlayedAt
+            }
+        ) {
+            returning {
+                user_id
+                game_id
+                status
+                playtime_minutes
+                completion_percentage
+                current_rank
+                peak_rank
+                notes
+                last_played_at
+            }
+        }
+    }
+`;
+
+export const UPDATE_GAME_COMPETITIVE = gql`
+    mutation UpdateGameCompetitive($gameId: Int!, $isCompetitive: Boolean!) {
+        update_games_by_pk(
+            pk_columns: { id: $gameId },
+            _set: { is_competitive: $isCompetitive }
+        ) {
+            id
+            is_competitive
         }
     }
 `;

@@ -118,7 +118,7 @@ const GameModal: React.FC<{ game: Game; onClose: () => void }> = ({ game, onClos
                                 {GAME_STATUSES.map((status) => (
                                     <button
                                         key={status}
-                                        onClick={() => handleStatusChange(status)}
+                                        onClick={() => handleStatusChange(status as game_status)}
                                         className={`px-4 py-2 rounded transition-all ${
                                             game.status === status 
                                                 ? `${getStatusColor(status)} text-white` 

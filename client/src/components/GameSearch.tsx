@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { searchgames, getTrendinggames } from '../services/igdb';
 import { useMutation } from '@apollo/client';
 import { ADD_GAME, ADD_GAME_PROGRESS, GET_DATA } from '../queries';
-import { Game } from '../types/game';
 import { useAuth } from '../context/AuthContext';
 
 interface IGDBGame {
@@ -158,14 +157,17 @@ const GameSearch: React.FC = () => {
                 ? game.cover.url.replace('t_thumb', 't_cover_big')
                 : null;
 
+            // Convert Unix timestamp to ISO date string
+            const year = game.first_release_date 
+                ? new Date(game.first_release_date * 1000).toISOString().split('T')[0]
+                : new Date().toISOString().split('T')[0];
+
             // First, add the game
             const { data: gameData } = await addGame({
                 variables: {
                     name: game.name,
                     description: game.summary,
-                    year: game.first_release_date 
-                        ? new Date(game.first_release_date * 1000).getFullYear()
-                        : new Date().getFullYear(),
+                    year: year,
                     igdb_id: game.id,
                     slug: game.slug,
                     cover_url: coverUrl

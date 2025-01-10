@@ -198,7 +198,9 @@ const GameCollection: React.FC = () => {
         playtime_minutes: progress.playtime_minutes,
         completion_percentage: progress.completion_percentage,
         last_played_at: progress.last_played_at,
-        notes: progress.notes
+        notes: progress.notes,
+        current_rank: progress.current_rank,
+        peak_rank: progress.peak_rank
     }));
 
     const showLoading = loading && networkStatus === NetworkStatus.loading;
