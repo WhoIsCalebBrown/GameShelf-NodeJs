@@ -9,7 +9,7 @@ interface IGDBGame {
     slug: string;
 }
 
-export const searchGames = async (searchTerm: string): Promise<IGDBGame[]> => {
+export const searchgames = async (searchTerm: string): Promise<IGDBGame[]> => {
     try {
         const response = await fetch('/api/igdb/search', {
             method: 'POST',
@@ -69,7 +69,7 @@ export const getGameById = async (id: number): Promise<IGDBGame> => {
     }
 };
 
-export const getTrendingGames = async (): Promise<IGDBGame[]> => {
+export const getTrendinggames = async (): Promise<IGDBGame[]> => {
     try {
         const response = await fetch('/api/igdb/trending');
 

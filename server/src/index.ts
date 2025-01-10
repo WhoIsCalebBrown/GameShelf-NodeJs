@@ -1,24 +1,28 @@
-import express from 'express';
+import path from 'path';
 import dotenv from 'dotenv';
-import igdbRoutes from './routes/igdb';
 
+// Load environment variables before any other imports
 dotenv.config();
 
-// Debug log to verify environment variables
-console.log('Environment Check:', {
-    clientId: process.env.TWITCH_CLIENT_ID ? 'Set' : 'Not Set',
-    accessToken: process.env.IGDB_ACCESS_SECRET ? 'Set' : 'Not Set'
-});
+import express from 'express';
+import igdbRoutes from './routes/igdb';
+import authRoutes from './routes/auth';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const port = process.env.PORT || 3001;
 
-// Middleware to parse JSON bodies
+// Middleware
 app.use(express.json());
 
-// IGDB routes
+// Routes
 app.use('/api/igdb', igdbRoutes);
+app.use('/api/auth', authRoutes);
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+    // Debug log to verify environment variables
+    console.log('Environment Check:', {
+        hasuraEndpoint: process.env.REACT_APP_HASURA_ENDPOINT ? 'Set' : 'Not Set',
+        hasuraAdminKey: process.env.REACT_APP_HASURA_ADMIN_KEY ? 'Set' : 'Not Set'
+    });
 }); 

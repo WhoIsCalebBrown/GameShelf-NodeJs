@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation } from '@apollo/client';
 import { UPDATE_GAME_STATUS, GET_DATA } from '../queries';
-import { Game, HasuraGameStatus } from '../types/game';
+import { Game, game_status } from '../types/game';
+import { useAuth } from '../context/AuthContext';
 
 interface GameCardProps {
     game: Game;
     actions?: React.ReactNode;
-    onStatusChange?: (status: HasuraGameStatus) => void;
+    onStatusChange?: (status: game_status) => void;
 }
 
 const GameCard: React.FC<GameCardProps> = ({ game, actions }) => {
-    const [localStatus, setLocalStatus] = useState(game.status);
+    const { user } = useAuth();
+    const [localStatus, setLocalStatus] = useState<game_status | undefined>(game.status);
     const [updateStatus] = useMutation(UPDATE_GAME_STATUS, {
         refetchQueries: [{ query: GET_DATA }]
     });
@@ -28,11 +30,12 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions }) => {
         WANT_TO_PLAY: 'text-purple-500'
     };
 
-    const handleStatusChange = async (newStatus: HasuraGameStatus) => {
+    const handleStatusChange = async (newStatus: game_status) => {
         try {
             await updateStatus({
                 variables: {
-                    id: game.id,
+                    userId: user?.id,
+                    gameId: game.id,
                     status: newStatus
                 }
             });
@@ -90,9 +93,9 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions }) => {
                 {/* Status Selector */}
                 <select
                     value={localStatus || ''}
-                    onChange={(e) => handleStatusChange(e.target.value as HasuraGameStatus)}
+                    onChange={(e) => handleStatusChange(e.target.value as game_status)}
                     className={`bg-dark/90 border border-gray-700 rounded-lg px-3 py-1.5 text-sm w-fit -mt-2 ${
-                        statusColors[localStatus as HasuraGameStatus] || 'text-gray-400'
+                        statusColors[localStatus as game_status] || 'text-gray-400'
                     }`}
                 >
                     <option value="" className="text-gray-400">Set Status</option>

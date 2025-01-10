@@ -6,8 +6,10 @@ export type GameStatus =
     | 'DROPPED'        // Stopped playing, don't plan to continue
     | 'WANT_TO_PLAY';  // Interested in playing
 
-// Add this type to match Hasura's enum name
-export type HasuraGameStatus = GameStatus;
+// This type must match the Hasura enum type exactly
+export type game_status = GameStatus;
+// Use this type for Hasura operations
+export type HasuraGameStatus = game_status;
 
 export interface Game {
     id: number;

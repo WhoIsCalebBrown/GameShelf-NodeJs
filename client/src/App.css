@@ -78,7 +78,7 @@ main {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Games Page Styles */
+/* games Page Styles */
 .games-page {
   padding: 2rem;
 }
@@ -103,7 +103,7 @@ main {
   margin-top: 2rem;
 }
 
-/* Existing Games Grid Styles */
+/* Existing games Grid Styles */
 .games-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));

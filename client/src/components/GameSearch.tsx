@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { searchGames, getTrendingGames } from '../services/igdb';
+import { searchgames, getTrendinggames } from '../services/igdb';
 import { useMutation } from '@apollo/client';
-import { ADD_GAME, GET_DATA } from '../queries';
+import { ADD_GAME, ADD_GAME_PROGRESS, GET_DATA } from '../queries';
 import { Game } from '../types/game';
+import { useAuth } from '../context/AuthContext';
 
 interface IGDBGame {
     id: number;
@@ -78,18 +79,19 @@ const GameCard: React.FC<GameCardProps> = ({ game, onAddGame }) => {
 };
 
 const GameSearch: React.FC = () => {
+    const { user } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState<IGDBGame[]>([]);
-    const [trendingGames, setTrendingGames] = useState<IGDBGame[]>([]);
+    const [trendinggames, setTrendinggames] = useState<IGDBGame[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isTrendingLoading, setIsTrendingLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const loadTrendingGames = async () => {
+        const loadTrendinggames = async () => {
             try {
-                const games = await getTrendingGames();
-                setTrendingGames(games);
+                const games = await getTrendinggames();
+                setTrendinggames(games);
             } catch (error) {
                 console.error('Error loading trending games:', error);
             } finally {
@@ -97,28 +99,35 @@ const GameSearch: React.FC = () => {
             }
         };
 
-        loadTrendingGames();
+        loadTrendinggames();
     }, []);
 
-    const [addGame] = useMutation(ADD_GAME, {
-        update(cache, { data: { insert_Games_one } }) {
-            const existingData = cache.readQuery<{ Games: Game[] }>({
+    const [addGame] = useMutation(ADD_GAME);
+    const [addGameProgress] = useMutation(ADD_GAME_PROGRESS, {
+        update(cache, { data: { insert_game_progress_one } }) {
+            const existingData = cache.readQuery<{ game_progress: any[] }>({
                 query: GET_DATA,
-                variables: { orderBy: { name: 'asc' } }
+                variables: { 
+                    userId: user?.id,
+                    orderBy: [{ status: 'asc' }]
+                }
             });
 
             if (existingData) {
                 cache.writeQuery({
                     query: GET_DATA,
-                    variables: { orderBy: { name: 'asc' } },
+                    variables: { 
+                        userId: user?.id,
+                        orderBy: [{ status: 'asc' }]
+                    },
                     data: {
-                        Games: [...existingData.Games, insert_Games_one]
+                        game_progress: [...existingData.game_progress, insert_game_progress_one]
                     }
                 });
             }
         },
         onError: (error) => {
-            setError(`Failed to add game: ${error.message}`);
+            setError(`Failed to add game progress: ${error.message}`);
         }
     });
 
@@ -128,7 +137,7 @@ const GameSearch: React.FC = () => {
         setIsLoading(true);
         setError(null);
         try {
-            const results = await searchGames(searchTerm);
+            const results = await searchgames(searchTerm);
             setSearchResults(results);
         } catch (error) {
             setError('Failed to search games. Please try again.');
@@ -139,12 +148,18 @@ const GameSearch: React.FC = () => {
     };
 
     const handleAddGame = async (game: IGDBGame) => {
+        if (!user?.id) {
+            setError('Please sign in to add games to your collection');
+            return;
+        }
+
         try {
             const coverUrl = game.cover 
                 ? game.cover.url.replace('t_thumb', 't_cover_big')
                 : null;
 
-            await addGame({
+            // First, add the game
+            const { data: gameData } = await addGame({
                 variables: {
                     name: game.name,
                     description: game.summary,
@@ -156,9 +171,19 @@ const GameSearch: React.FC = () => {
                     cover_url: coverUrl
                 }
             });
+
+            // Then create the game progress
+            await addGameProgress({
+                variables: {
+                    userId: user.id,
+                    gameId: gameData.insert_games_one.id
+                }
+            });
+
             setSearchResults(results => results.filter(g => g.id !== game.id));
         } catch (error) {
             console.error('Error adding game:', error);
+            setError(`Failed to add game: ${error.message}`);
         }
     };
 
@@ -203,16 +228,16 @@ const GameSearch: React.FC = () => {
                 )}
             </div>
 
-            {/* Trending Games Section */}
+            {/* Trending games Section */}
             <div className="bg-dark rounded-lg p-6 shadow-lg">
-                <h2 className="text-2xl font-bold mb-6">Trending Games</h2>
+                <h2 className="text-2xl font-bold mb-6">Trending games</h2>
                 {isTrendingLoading ? (
                     <div className="animate-pulse flex items-center justify-center h-32">
                         <div className="text-lg text-gray-400">Loading trending games...</div>
                     </div>
-                ) : trendingGames.length > 0 ? (
+                ) : trendinggames.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {trendingGames.map(game => (
+                        {trendinggames.map(game => (
                             <GameCard 
                                 key={game.id} 
                                 game={game} 

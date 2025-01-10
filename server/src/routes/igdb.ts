@@ -99,14 +99,14 @@ router.get('/trending', async (req, res) => {
         const popularityOrder = primitives.map((game: { game_id: number }) => game.game_id);
 
         // Sort games based on their position in the popularity array and limit to 15
-        const sortedGames = Array.isArray(games) ? 
+        const sortedgames = Array.isArray(games) ? 
             games
                 .sort((a: { id: number }, b: { id: number }) => 
                     popularityOrder.indexOf(a.id) - popularityOrder.indexOf(b.id)
                 )
                 .slice(0, 15) : [];
 
-        res.json(sortedGames);
+        res.json(sortedgames);
     } catch (error) {
         console.error('Detailed Error:', error);
         res.status(500).json({ 

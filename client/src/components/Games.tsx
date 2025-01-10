@@ -4,14 +4,14 @@ import DataComponent from '../DataComponent';
 import GameStats from './GameStats';
 import GameSearch from './GameSearch';
 
-const Games: React.FC = () => {
+const games: React.FC = () => {
   return (
     <div className="p-8">
       <div className="flex items-center mb-8">
         <Link to="/" className="text-primary hover:underline mr-8">
           ← Back to Home
         </Link>
-        <h1 className="text-3xl font-bold">Your Games Collection</h1>
+        <h1 className="text-3xl font-bold">Your games Collection</h1>
       </div>
       
       <div className="mb-8">
@@ -28,4 +28,4 @@ const Games: React.FC = () => {
   );
 };
 
-export default Games; 
+export default games; 

@@ -4,6 +4,7 @@ import { GET_DATA, DELETE_GAME, UPDATE_GAME_STATUS } from '../queries';
 import GameCard from './GameCard';
 import { Game, GameStatus } from '../types/game';
 import GameStats from './GameStats';
+import { useAuth } from '../context/AuthContext';
 
 type SortField = 'name' | 'status' | 'year';
 type SortOrder = 'asc' | 'desc';
@@ -55,6 +56,7 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({ onDelete }) => {
 };
 
 const GameCollection: React.FC = () => {
+    const { user } = useAuth();
     const [sortConfig, setSortConfig] = useState<SortConfig>({
         field: 'name',
         order: 'asc'
@@ -62,51 +64,71 @@ const GameCollection: React.FC = () => {
 
     const { loading, error, data, networkStatus } = useQuery(GET_DATA, {
         variables: {
-            orderBy: { [sortConfig.field]: sortConfig.order }
+            userId: user?.id,
+            orderBy: sortConfig.field === 'status' 
+                ? [{ status: sortConfig.order }]
+                : [{ game: { [sortConfig.field]: sortConfig.order } }]
         },
         fetchPolicy: 'cache-and-network',
-        notifyOnNetworkStatusChange: true
+        notifyOnNetworkStatusChange: true,
+        skip: !user?.id
     });
 
     const [deleteGame] = useMutation(DELETE_GAME, {
-        update(cache, { data: { delete_Games_by_pk } }) {
-            const existingData = cache.readQuery<{ Games: Game[] }>({
+        update(cache, { data: { delete_game_progress } }) {
+            const existingData = cache.readQuery<{ game_progress: any[] }>({
                 query: GET_DATA,
-                variables: { orderBy: { [sortConfig.field]: sortConfig.order } }
+                variables: { 
+                    userId: user?.id,
+                    orderBy: sortConfig.field === 'status' 
+                        ? [{ status: sortConfig.order }]
+                        : [{ game: { [sortConfig.field]: sortConfig.order } }]
+                }
             });
-            if (existingData) {
-                const updatedGames = existingData.Games.filter(
-                    game => game.id !== delete_Games_by_pk.id
+            if (existingData && delete_game_progress.affected_rows > 0) {
+                const updatedProgress = existingData.game_progress.filter(
+                    progress => progress.game.id !== delete_game_progress.returning[0].game_id
                 );
                 cache.writeQuery({
                     query: GET_DATA,
-                    variables: { orderBy: { [sortConfig.field]: sortConfig.order } },
-                    data: { Games: updatedGames }
+                    variables: { 
+                        userId: user?.id,
+                        orderBy: sortConfig.field === 'status' 
+                            ? [{ status: sortConfig.order }]
+                            : [{ game: { [sortConfig.field]: sortConfig.order } }]
+                    },
+                    data: { game_progress: updatedProgress }
                 });
             }
-        },
-        optimisticResponse: (vars) => ({
-            delete_Games_by_pk: {
-                id: vars.id,
-                __typename: 'Games'
-            }
-        })
+        }
     });
 
     const [updateGameStatus] = useMutation(UPDATE_GAME_STATUS, {
-        update(cache, { data: { update_Games_by_pk } }) {
-            const existingData = cache.readQuery<{ Games: Game[] }>({ 
+        update(cache, { data: { update_game_progress } }) {
+            const existingData = cache.readQuery<{ game_progress: any[] }>({
                 query: GET_DATA,
-                variables: { orderBy: { [sortConfig.field]: sortConfig.order } }
+                variables: { 
+                    userId: user?.id,
+                    orderBy: sortConfig.field === 'status' 
+                        ? [{ status: sortConfig.order }]
+                        : [{ game: { [sortConfig.field]: sortConfig.order } }]
+                }
             });
-            if (existingData) {
-                const updatedGames = existingData.Games.map(game =>
-                    game.id === update_Games_by_pk.id ? { ...game, ...update_Games_by_pk } : game
+            if (existingData && update_game_progress.returning.length > 0) {
+                const updatedProgress = existingData.game_progress.map(progress =>
+                    progress.game.id === update_game_progress.returning[0].game_id
+                        ? { ...progress, status: update_game_progress.returning[0].status }
+                        : progress
                 );
                 cache.writeQuery({
                     query: GET_DATA,
-                    variables: { orderBy: { [sortConfig.field]: sortConfig.order } },
-                    data: { Games: updatedGames }
+                    variables: { 
+                        userId: user?.id,
+                        orderBy: sortConfig.field === 'status' 
+                            ? [{ status: sortConfig.order }]
+                            : [{ game: { [sortConfig.field]: sortConfig.order } }]
+                    },
+                    data: { game_progress: updatedProgress }
                 });
             }
         }
@@ -119,10 +141,14 @@ const GameCollection: React.FC = () => {
         }));
     };
 
-    const handleDelete = async (id: number) => {
+    const handleDelete = async (gameId: number) => {
+        if (!user?.id) return;
         try {
             await deleteGame({
-                variables: { id }
+                variables: { 
+                    userId: user.id,
+                    gameId 
+                }
             });
         } catch (error) {
             console.error('Error deleting game:', error);
@@ -130,18 +156,13 @@ const GameCollection: React.FC = () => {
     };
 
     const handleStatusChange = async (gameId: number, newStatus: GameStatus) => {
+        if (!user?.id) return;
         try {
             await updateGameStatus({
                 variables: {
-                    id: gameId,
+                    userId: user.id,
+                    gameId,
                     status: newStatus
-                },
-                optimisticResponse: {
-                    update_Games_by_pk: {
-                        id: gameId,
-                        status: newStatus,
-                        __typename: 'Games'
-                    }
                 }
             });
         } catch (error) {
@@ -170,9 +191,27 @@ const GameCollection: React.FC = () => {
         </button>
     );
 
-    const games = data?.Games || [];
+    const gameProgressList = data?.game_progress || [];
+    const games = gameProgressList.map((progress: any) => ({
+        ...progress.game,
+        status: progress.status,
+        playtime_minutes: progress.playtime_minutes,
+        completion_percentage: progress.completion_percentage,
+        last_played_at: progress.last_played_at,
+        notes: progress.notes
+    }));
 
     const showLoading = loading && networkStatus === NetworkStatus.loading;
+
+    if (!user) {
+        return (
+            <div className="bg-dark p-8 rounded-lg">
+                <div className="text-lg text-gray-400 text-center">
+                    Please sign in to view your game collection.
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@apollo/client';
 import { GET_DATA, UPDATE_GAME_STATUS } from './queries';
+import { useAuth } from './context/AuthContext';
+import { game_status } from './types/game';
 
 const LoadingSpinner = () => <p className="text-center">Loading...</p>;
 const ErrorMessage: React.FC<{ message: string }> = ({ message }) => (
@@ -14,35 +16,45 @@ interface Game {
     year: number;
     igdb_id: number;
     slug: string;
-    status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED';
+    status: game_status;
 }
 
 const getStatusColor = (status: string) => {
     switch (status) {
-        case 'COMPLETED': return 'bg-green-500';
-        case 'IN_PROGRESS': return 'bg-yellow-500';
-        case 'ABANDONED': return 'bg-red-500';
+        case 'NOT_STARTED': return 'bg-gray-500';
+        case 'IN_PROGRESS': return 'bg-green-500';
+        case 'COMPLETED': return 'bg-blue-500';
+        case 'ON_HOLD': return 'bg-yellow-500';
+        case 'DROPPED': return 'bg-red-500';
+        case 'WANT_TO_PLAY': return 'bg-purple-500';
         default: return 'bg-gray-500';
     }
 };
 
 const getStatusText = (status: string) => {
-    return status.replace('_', ' ');
+    return status.replace(/_/g, ' ');
 };
 
-const GAME_STATUSES = ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'ABANDONED'] as const;
-type GameStatus = typeof GAME_STATUSES[number];
+const GAME_STATUSES = ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD', 'DROPPED', 'WANT_TO_PLAY'] as const;
+
 
 const GameModal: React.FC<{ game: Game; onClose: () => void }> = ({ game, onClose }) => {
+    const { user } = useAuth();
     const [updateStatus] = useMutation(UPDATE_GAME_STATUS, {
-        refetchQueries: [{ query: GET_DATA }],
+        refetchQueries: [{ 
+            query: GET_DATA,
+            variables: {
+                userId: user?.id,
+                orderBy: [{ status: 'asc' }]
+            }
+        }],
         onError: (error) => {
             console.error('Error updating game status:', error);
             alert(`Failed to update game status: ${error.message}`);
         }
     });
 
-    const handleStatusChange = async (newStatus: GameStatus) => {
+    const handleStatusChange = async (newStatus: game_status) => {
         console.log('Attempting to update status:', { gameId: game.id, newStatus });
         try {
             const numericId = parseInt(game.id);
@@ -51,7 +63,8 @@ const GameModal: React.FC<{ game: Game; onClose: () => void }> = ({ game, onClos
             }
             const result = await updateStatus({
                 variables: {
-                    id: numericId,
+                    userId: user?.id,
+                    gameId: numericId,
                     status: newStatus
                 }
             });
@@ -181,7 +194,7 @@ const DataComponent: React.FC = () => {
     if (loading) return <LoadingSpinner />;
     if (error) return <ErrorMessage message={error.message} />;
     
-    const games = data?.Games;
+    const games = data?.games;
     if (!games?.length) return <p className="text-center">No games available</p>;
 
     return (
