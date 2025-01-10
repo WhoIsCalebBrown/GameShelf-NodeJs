@@ -42,7 +42,7 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions }) => {
     };
 
     return (
-        <div className="bg-dark-light rounded-lg overflow-hidden h-[250px] flex">
+        <div className="bg-dark-light rounded-lg overflow-hidden h-[250px] flex transform transition-all duration-300 ease-in-out">
             {/* Image Section - 2:3 aspect ratio */}
             <div className="w-[167px] h-full flex-shrink-0 relative bg-gray-700">
                 {game.cover_url ? (
@@ -66,17 +66,23 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions }) => {
 
             {/* Content Section */}
             <div className="flex-1 p-4 flex flex-col relative max-w-[500px]">
-                {/* Title and Year on same line */}
-                <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-bold text-lg truncate pr-4 flex-1">{game.name}</h3>
-                    <div className="flex items-center gap-2">
+                {/* Header Section */}
+                <div className="relative mb-2">
+                    {/* Title */}
+                    <div className="pr-20">
+                        <h3 className="font-bold text-lg line-clamp-1">{game.name}</h3>
+                    </div>
+                    {/* Year and Actions - Absolute positioned */}
+                    <div className="absolute top-0 right-0 flex items-center gap-2">
                         {game.year && (
-                            <span className="text-sm text-text-secondary whitespace-nowrap">
+                            <span className="text-sm text-text-secondary">
                                 {game.year}
                             </span>
                         )}
                         {actions && (
-                            <div className="ml-2">{actions}</div>
+                            <div className="flex-shrink-0">
+                                {actions}
+                            </div>
                         )}
                     </div>
                 </div>
@@ -85,22 +91,22 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions }) => {
                 <select
                     value={localStatus || ''}
                     onChange={(e) => handleStatusChange(e.target.value as HasuraGameStatus)}
-                    className={`mb-3 bg-dark/90 border border-gray-700 rounded-lg px-3 py-1.5 text-sm w-fit ${
+                    className={`bg-dark/90 border border-gray-700 rounded-lg px-3 py-1.5 text-sm w-fit ${
                         statusColors[localStatus as HasuraGameStatus] || 'text-gray-400'
                     }`}
                 >
-                    <option value="">Set Status</option>
-                    <option value="NOT_STARTED">Not Started</option>
-                    <option value="IN_PROGRESS">In Progress</option>
-                    <option value="COMPLETED">Completed</option>
-                    <option value="ON_HOLD">On Hold</option>
-                    <option value="DROPPED">Dropped</option>
-                    <option value="WANT_TO_PLAY">Want to Play</option>
+                    <option value="" className="text-gray-400">Set Status</option>
+                    <option value="NOT_STARTED" className="text-gray-400">Not Started</option>
+                    <option value="IN_PROGRESS" className="text-green-500">In Progress</option>
+                    <option value="COMPLETED" className="text-blue-500">Completed</option>
+                    <option value="ON_HOLD" className="text-yellow-500">On Hold</option>
+                    <option value="DROPPED" className="text-red-500">Dropped</option>
+                    <option value="WANT_TO_PLAY" className="text-purple-500">Want to Play</option>
                 </select>
 
-                {/* Description */}
-                <div className="flex-1 overflow-hidden mb-4">
-                    <div className="text-sm text-text-secondary line-clamp-4">
+                {/* Description - Pushed to bottom */}
+                <div className="mt-auto pt-3">
+                    <div className="text-sm text-text-secondary line-clamp-6">
                         {game.description || 'No description available.'}
                     </div>
                 </div>

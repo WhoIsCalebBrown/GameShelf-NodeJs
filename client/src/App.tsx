@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Home from './components/Home';
 import GameSearch from './components/GameSearch';
 import GameCollection from './components/GameCollection';
+import './animations.css';
 
 const App: React.FC = () => {
   return (

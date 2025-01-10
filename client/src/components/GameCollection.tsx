@@ -37,13 +37,13 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({ onDelete }) => {
                         className="fixed inset-0" 
                         onClick={() => setIsOpen(false)}
                     />
-                    <div className="absolute right-0 mt-2 w-48 bg-dark-light rounded-lg shadow-lg z-50 py-1">
+                    <div className="absolute right-0 mt-2 w-48 bg-dark-light border border-gray-600 rounded-lg shadow-lg z-50">
                         <button
                             onClick={() => {
                                 onDelete();
                                 setIsOpen(false);
                             }}
-                            className="w-full text-left px-4 py-2 text-red-500 hover:bg-gray-700 transition-colors"
+                            className="w-full text-left px-4 py-2 text-red-500 hover:bg-gray-700 transition-colors rounded-lg"
                         >
                             Delete
                         </button>
@@ -64,7 +64,7 @@ const GameCollection: React.FC = () => {
         variables: {
             orderBy: { [sortConfig.field]: sortConfig.order }
         },
-        fetchPolicy: 'cache-and-network'
+        fetchPolicy: 'cache-first'
     });
 
     const [deleteGame] = useMutation(DELETE_GAME, {
@@ -183,16 +183,17 @@ const GameCollection: React.FC = () => {
             
             <GameStats games={games} />
             
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-1 gap-y-4 max-w-[1600px] mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-w-[1600px] mx-auto">
                 {games.map((game: Game) => (
-                    <GameCard
-                        key={game.id}
-                        game={game}
-                        onStatusChange={(status) => handleStatusChange(game.id, status)}
-                        actions={
-                            <DropdownMenu onDelete={() => handleDelete(game.id)} />
-                        }
-                    />
+                    <div key={game.id} className="transition-all duration-300 ease-in-out">
+                        <GameCard
+                            game={game}
+                            onStatusChange={(status) => handleStatusChange(game.id, status)}
+                            actions={
+                                <DropdownMenu onDelete={() => handleDelete(game.id)} />
+                            }
+                        />
+                    </div>
                 ))}
             </div>
         </div>
