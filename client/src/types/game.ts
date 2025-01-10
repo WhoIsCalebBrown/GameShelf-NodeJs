@@ -1,4 +1,4 @@
-export type game_status = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'DROPPED';
+export type game_status = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD' | 'DROPPED' | 'WANT_TO_PLAY';
 
 export interface Game {
     id: number;

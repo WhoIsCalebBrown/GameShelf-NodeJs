@@ -9,6 +9,7 @@ interface GameCardProps {
     game: Game;
     actions?: React.ReactNode;
     onStatusChange?: (status: game_status) => void;
+    onDelete?: () => void;
 }
 
 interface DropdownMenuProps {
@@ -70,7 +71,7 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({ onDelete, onEdit }) => {
     );
 };
 
-const GameCard: React.FC<GameCardProps> = ({ game, actions }) => {
+const GameCard: React.FC<GameCardProps> = ({ game, actions, onStatusChange, onDelete }) => {
     const { user } = useAuth();
     const [localStatus, setLocalStatus] = useState<game_status | undefined>(game.status);
     const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
@@ -184,12 +185,8 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions }) => {
         WANT_TO_PLAY: 'text-purple-500'
     };
 
-    console.log('Game data:', game);
-    console.log('Year value:', game.year);
-    console.log('Year type:', typeof game.year);
 
     const releaseYear = game.year;
-    console.log('Computed releaseYear:', releaseYear);
 
     return (
         <>
@@ -234,7 +231,7 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions }) => {
                                 </span>
                             )}
                             <DropdownMenu 
-                                onDelete={() => {}} 
+                                onDelete={onDelete || (() => {})}
                                 onEdit={() => setIsProgressModalOpen(true)} 
                             />
                         </div>

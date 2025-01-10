@@ -19,8 +19,22 @@ router.post('/search', async (req, res) => {
             },
             body: `
                 search "${searchTerm}";
-                fields name,summary,first_release_date,cover.*,slug,id;
-                limit 10;
+                fields name,
+                      summary,
+                      first_release_date,
+                      cover.*,
+                      slug,
+                      id,
+                      rating,
+                      total_rating,
+                      game_modes.*,
+                      genres.*,
+                      platforms.*,
+                      themes.*,
+                      involved_companies.company.name,
+                      involved_companies.developer,
+                      involved_companies.publisher;
+                limit 20;
             `
         });
 

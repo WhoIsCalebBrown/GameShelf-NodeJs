@@ -13,6 +13,32 @@ interface IGDBGame {
         url: string;
     };
     slug: string;
+    rating?: number;
+    total_rating?: number;
+    game_modes?: Array<{
+        id: number;
+        name: string;
+    }>;
+    genres?: Array<{
+        id: number;
+        name: string;
+    }>;
+    platforms?: Array<{
+        id: number;
+        name: string;
+    }>;
+    themes?: Array<{
+        id: number;
+        name: string;
+    }>;
+    involved_companies?: Array<{
+        company: {
+            id: number;
+            name: string;
+        };
+        developer: boolean;
+        publisher: boolean;
+    }>;
 }
 
 interface GameCardProps {
@@ -23,8 +49,16 @@ interface GameCardProps {
 const GameCard: React.FC<GameCardProps> = ({ game, onAddGame }) => {
     const [isExpanded, setIsExpanded] = useState(false);
 
+    const getDeveloper = () => {
+        return game.involved_companies?.find(company => company.developer)?.company.name;
+    };
+
+    const getPublisher = () => {
+        return game.involved_companies?.find(company => company.publisher)?.company.name;
+    };
+
     return (
-        <div className="bg-dark-light rounded-lg p-4 flex flex-col h-[400px] relative">
+        <div className="bg-dark-light rounded-lg p-4 flex flex-col h-[500px] relative">
             <div className="flex gap-4 h-32 mb-4">
                 {game.cover ? (
                     <img 
@@ -44,27 +78,89 @@ const GameCard: React.FC<GameCardProps> = ({ game, onAddGame }) => {
                             {new Date(game.first_release_date * 1000).getFullYear()}
                         </p>
                     )}
+                    {game.total_rating && (
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="text-sm text-text-secondary">Rating:</span>
+                            <span className={`text-sm ${
+                                game.total_rating >= 80 ? 'text-green-500' :
+                                game.total_rating >= 60 ? 'text-yellow-500' :
+                                'text-red-500'
+                            }`}>
+                                {Math.round(game.total_rating)}%
+                            </span>
+                        </div>
+                    )}
                 </div>
             </div>
             
-            <div className="flex-1 overflow-hidden">
-                <div 
-                    className={`text-sm text-text-secondary ${
-                        isExpanded ? 'overflow-y-auto max-h-[160px]' : 'line-clamp-3'
-                    }`}
-                >
-                    {game.summary || 'No description available.'}
-                </div>
-                {game.summary && game.summary.length > 140 && (
-                    <button
-                        onClick={() => setIsExpanded(!isExpanded)}
-                        className="text-primary-500 text-sm mt-2 hover:text-primary-400 transition-colors"
+            {/* Game Details */}
+            <div className="flex-1 overflow-hidden space-y-4">
+                {/* Description */}
+                <div>
+                    <div 
+                        className={`text-sm text-text-secondary ${
+                            isExpanded ? 'overflow-y-auto max-h-[120px]' : 'line-clamp-3'
+                        }`}
                     >
-                        {isExpanded ? 'Show Less' : 'Read More'}
-                    </button>
-                )}
+                        {game.summary || 'No description available.'}
+                    </div>
+                    {game.summary && game.summary.length > 140 && (
+                        <button
+                            onClick={() => setIsExpanded(!isExpanded)}
+                            className="text-primary-500 text-sm mt-2 hover:text-primary-400 transition-colors"
+                        >
+                            {isExpanded ? 'Show Less' : 'Read More'}
+                        </button>
+                    )}
+                </div>
+
+                {/* Additional Info */}
+                <div className="space-y-2 text-sm">
+                    {/* Genres */}
+                    {game.genres && game.genres.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                            {game.genres.map(genre => (
+                                <span 
+                                    key={genre.id}
+                                    className="px-2 py-1 bg-dark rounded-full text-xs text-gray-300"
+                                >
+                                    {genre.name}
+                                </span>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Platforms */}
+                    {game.platforms && game.platforms.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                            {game.platforms.map(platform => (
+                                <span 
+                                    key={platform.id}
+                                    className="px-2 py-1 bg-primary-500/20 rounded-full text-xs text-primary-300"
+                                >
+                                    {platform.name}
+                                </span>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Developer & Publisher */}
+                    <div className="space-y-1">
+                        {getDeveloper() && (
+                            <p className="text-gray-400">
+                                <span className="font-medium">Developer:</span> {getDeveloper()}
+                            </p>
+                        )}
+                        {getPublisher() && (
+                            <p className="text-gray-400">
+                                <span className="font-medium">Publisher:</span> {getPublisher()}
+                            </p>
+                        )}
+                    </div>
+                </div>
             </div>
             
+            {/* Add to Collection Button */}
             <div className="mt-4">
                 <button 
                     onClick={() => onAddGame(game)}
@@ -80,11 +176,19 @@ const GameCard: React.FC<GameCardProps> = ({ game, onAddGame }) => {
 const GameSearch: React.FC = () => {
     const { user } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
+    const [unfilteredResults, setUnfilteredResults] = useState<IGDBGame[]>([]);
     const [searchResults, setSearchResults] = useState<IGDBGame[]>([]);
     const [trendinggames, setTrendinggames] = useState<IGDBGame[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isTrendingLoading, setIsTrendingLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    
+    // Advanced filter states
+    const [showFilters, setShowFilters] = useState(false);
+    const [yearRange, setYearRange] = useState({ min: 1970, max: new Date().getFullYear() });
+    const [ratingRange, setRatingRange] = useState({ min: 0, max: 100 });
+    const [selectedGenres, setSelectedGenres] = useState<number[]>([]);
+    const [selectedPlatforms, setSelectedPlatforms] = useState<number[]>([]);
 
     useEffect(() => {
         const loadTrendinggames = async () => {
@@ -130,6 +234,42 @@ const GameSearch: React.FC = () => {
         }
     });
 
+    // Add new useEffect for filtering
+    useEffect(() => {
+        const applyFilters = () => {
+            const filteredResults = unfilteredResults.filter(game => {
+                // Year filter
+                const gameYear = game.first_release_date 
+                    ? new Date(game.first_release_date * 1000).getFullYear()
+                    : null;
+                if (gameYear && (gameYear < yearRange.min || gameYear > yearRange.max)) {
+                    return false;
+                }
+
+                // Rating filter
+                if (game.total_rating && (game.total_rating < ratingRange.min || game.total_rating > ratingRange.max)) {
+                    return false;
+                }
+
+                // Genre filter
+                if (selectedGenres.length > 0 && (!game.genres || !game.genres.some(genre => selectedGenres.includes(genre.id)))) {
+                    return false;
+                }
+
+                // Platform filter
+                if (selectedPlatforms.length > 0 && (!game.platforms || !game.platforms.some(platform => selectedPlatforms.includes(platform.id)))) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            setSearchResults(filteredResults);
+        };
+
+        applyFilters();
+    }, [unfilteredResults, yearRange, ratingRange, selectedGenres, selectedPlatforms]);
+
     const handleSearch = async () => {
         if (!searchTerm.trim()) return;
 
@@ -137,7 +277,7 @@ const GameSearch: React.FC = () => {
         setError(null);
         try {
             const results = await searchgames(searchTerm);
-            setSearchResults(results);
+            setUnfilteredResults(results);
         } catch (error) {
             setError('Failed to search games. Please try again.');
             console.error('Search error:', error);
@@ -182,7 +322,7 @@ const GameSearch: React.FC = () => {
                 }
             });
 
-            setSearchResults(results => results.filter(g => g.id !== game.id));
+            setUnfilteredResults(results => results.filter(g => g.id !== game.id));
         } catch (error) {
             console.error('Error adding game:', error);
             setError(`Failed to add game: ${error.message}`);
@@ -193,22 +333,172 @@ const GameSearch: React.FC = () => {
         <div className="space-y-8">
             {/* Search Section */}
             <div className="bg-dark rounded-lg p-6 shadow-lg">
-                <div className="flex gap-4 mb-6">
-                    <input
-                        type="text"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                        placeholder="Search for games..."
-                        className="form-input flex-1 bg-dark-light border-gray-700 focus:border-primary-500 focus:ring-primary-500"
-                    />
-                    <button 
-                        onClick={handleSearch}
-                        disabled={isLoading}
-                        className="btn bg-primary-500 hover:bg-primary-600 transition-colors disabled:opacity-50"
-                    >
-                        {isLoading ? 'Searching...' : 'Search'}
-                    </button>
+                <div className="space-y-4">
+                    {/* Search input and button */}
+                    <div className="flex gap-4">
+                        <div className="flex-1 flex gap-4">
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                                placeholder="Search for games..."
+                                className="form-input flex-1 bg-dark-light border-gray-700 focus:border-primary-500 focus:ring-primary-500"
+                            />
+                            <button 
+                                onClick={handleSearch}
+                                disabled={isLoading}
+                                className="btn bg-primary-500 hover:bg-primary-600 transition-colors disabled:opacity-50 min-w-[100px]"
+                            >
+                                {isLoading ? 'Searching...' : 'Search'}
+                            </button>
+                        </div>
+                        <button
+                            onClick={() => setShowFilters(!showFilters)}
+                            className={`btn min-w-[120px] flex items-center justify-center gap-2 ${
+                                showFilters 
+                                    ? 'bg-gray-700 hover:bg-gray-600' 
+                                    : 'bg-primary-500 hover:bg-primary-600'
+                            }`}
+                        >
+                            <svg 
+                                className="w-5 h-5" 
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                            >
+                                <path 
+                                    strokeLinecap="round" 
+                                    strokeLinejoin="round" 
+                                    strokeWidth={2} 
+                                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" 
+                                />
+                            </svg>
+                            {showFilters ? 'Hide Filters' : 'Filters'}
+                        </button>
+                    </div>
+
+                    {/* Advanced Filters */}
+                    {showFilters && (
+                        <div className="bg-dark-light p-4 rounded-lg space-y-4">
+                            {/* Year Range Filter */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-400">Release Year Range</label>
+                                <div className="flex gap-4">
+                                    <input
+                                        type="number"
+                                        min="1970"
+                                        max={yearRange.max}
+                                        value={yearRange.min}
+                                        onChange={(e) => setYearRange(prev => ({ ...prev, min: parseInt(e.target.value) }))}
+                                        className="form-input w-24 bg-dark border-gray-700"
+                                    />
+                                    <span className="text-gray-400">to</span>
+                                    <input
+                                        type="number"
+                                        min={yearRange.min}
+                                        max={new Date().getFullYear()}
+                                        value={yearRange.max}
+                                        onChange={(e) => setYearRange(prev => ({ ...prev, max: parseInt(e.target.value) }))}
+                                        className="form-input w-24 bg-dark border-gray-700"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Rating Range Filter */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-400">Rating Range (%)</label>
+                                <div className="flex gap-4">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max={ratingRange.max}
+                                        value={ratingRange.min}
+                                        onChange={(e) => setRatingRange(prev => ({ ...prev, min: parseInt(e.target.value) }))}
+                                        className="form-input w-24 bg-dark border-gray-700"
+                                    />
+                                    <span className="text-gray-400">to</span>
+                                    <input
+                                        type="number"
+                                        min={ratingRange.min}
+                                        max="100"
+                                        value={ratingRange.max}
+                                        onChange={(e) => setRatingRange(prev => ({ ...prev, max: parseInt(e.target.value) }))}
+                                        className="form-input w-24 bg-dark border-gray-700"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Genre Filter */}
+                            {searchResults.length > 0 && (
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-400">Genres</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {Array.from(new Set(searchResults.flatMap(game => game.genres || []))).map(genre => (
+                                            <button
+                                                key={genre.id}
+                                                onClick={() => {
+                                                    setSelectedGenres(prev => 
+                                                        prev.includes(genre.id)
+                                                            ? prev.filter(id => id !== genre.id)
+                                                            : [...prev, genre.id]
+                                                    );
+                                                }}
+                                                className={`px-3 py-1 rounded-full text-sm ${
+                                                    selectedGenres.includes(genre.id)
+                                                        ? 'bg-primary-500 text-white'
+                                                        : 'bg-dark text-gray-400 hover:bg-dark-lighter'
+                                                }`}
+                                            >
+                                                {genre.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Platform Filter */}
+                            {searchResults.length > 0 && (
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-400">Platforms</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {Array.from(new Set(searchResults.flatMap(game => game.platforms || []))).map(platform => (
+                                            <button
+                                                key={platform.id}
+                                                onClick={() => {
+                                                    setSelectedPlatforms(prev => 
+                                                        prev.includes(platform.id)
+                                                            ? prev.filter(id => id !== platform.id)
+                                                            : [...prev, platform.id]
+                                                    );
+                                                }}
+                                                className={`px-3 py-1 rounded-full text-sm ${
+                                                    selectedPlatforms.includes(platform.id)
+                                                        ? 'bg-primary-500 text-white'
+                                                        : 'bg-dark text-gray-400 hover:bg-dark-lighter'
+                                                }`}
+                                            >
+                                                {platform.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Reset Filters Button */}
+                            <button
+                                onClick={() => {
+                                    setYearRange({ min: 1970, max: new Date().getFullYear() });
+                                    setRatingRange({ min: 0, max: 100 });
+                                    setSelectedGenres([]);
+                                    setSelectedPlatforms([]);
+                                }}
+                                className="btn bg-gray-700 hover:bg-gray-600 text-sm"
+                            >
+                                Reset Filters
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {error && (
@@ -217,8 +507,9 @@ const GameSearch: React.FC = () => {
                     </div>
                 )}
 
+                {/* Search Results */}
                 {searchResults.length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
                         {searchResults.map(game => (
                             <GameCard 
                                 key={game.id} 
@@ -230,7 +521,7 @@ const GameSearch: React.FC = () => {
                 )}
             </div>
 
-            {/* Trending games Section */}
+            {/* Trending Games Section */}
             <div className="bg-dark rounded-lg p-6 shadow-lg">
                 <h2 className="text-2xl font-bold mb-6">Trending games</h2>
                 {isTrendingLoading ? (

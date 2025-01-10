@@ -14,47 +14,6 @@ interface SortConfig {
     order: SortOrder;
 }
 
-interface DropdownMenuProps {
-    onDelete: () => void;
-}
-
-const DropdownMenu: React.FC<DropdownMenuProps> = ({ onDelete }) => {
-    const [isOpen, setIsOpen] = useState(false);
-
-    return (
-        <div className="relative">
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="p-1 hover:bg-gray-700 rounded-full transition-colors"
-            >
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-                </svg>
-            </button>
-            
-            {isOpen && (
-                <>
-                    <div 
-                        className="fixed inset-0" 
-                        onClick={() => setIsOpen(false)}
-                    />
-                    <div className="absolute right-0 mt-2 w-48 bg-dark-light border border-gray-600 rounded-lg shadow-lg z-50">
-                        <button
-                            onClick={() => {
-                                onDelete();
-                                setIsOpen(false);
-                            }}
-                            className="w-full text-left px-4 py-2 text-red-500 hover:bg-gray-700 transition-colors rounded-lg"
-                        >
-                            Delete
-                        </button>
-                    </div>
-                </>
-            )}
-        </div>
-    );
-};
-
 const GameCollection: React.FC = () => {
     const { user } = useAuth();
     const [sortConfig, setSortConfig] = useState<SortConfig>({
@@ -76,30 +35,40 @@ const GameCollection: React.FC = () => {
 
     const [deleteGame] = useMutation(DELETE_GAME, {
         update(cache, { data: { delete_game_progress } }) {
-            const existingData = cache.readQuery<{ game_progress: any[] }>({
-                query: GET_DATA,
-                variables: { 
-                    userId: user?.id,
-                    orderBy: sortConfig.field === 'status' 
-                        ? [{ status: sortConfig.order }]
-                        : [{ game: { [sortConfig.field]: sortConfig.order } }]
-                }
-            });
-            if (existingData && delete_game_progress.affected_rows > 0) {
-                const updatedProgress = existingData.game_progress.filter(
-                    progress => progress.game.id !== delete_game_progress.returning[0].game_id
-                );
-                cache.writeQuery({
+            try {
+                const existingData = cache.readQuery<{ game_progress: any[] }>({
                     query: GET_DATA,
                     variables: { 
                         userId: user?.id,
                         orderBy: sortConfig.field === 'status' 
                             ? [{ status: sortConfig.order }]
                             : [{ game: { [sortConfig.field]: sortConfig.order } }]
-                    },
-                    data: { game_progress: updatedProgress }
+                    }
                 });
+
+                if (existingData && delete_game_progress.affected_rows > 0) {
+                    const deletedGameId = delete_game_progress.returning[0].game_id;
+                    const updatedProgress = existingData.game_progress.filter(
+                        progress => progress.game.id !== deletedGameId
+                    );
+
+                    cache.writeQuery({
+                        query: GET_DATA,
+                        variables: { 
+                            userId: user?.id,
+                            orderBy: sortConfig.field === 'status' 
+                                ? [{ status: sortConfig.order }]
+                                : [{ game: { [sortConfig.field]: sortConfig.order } }]
+                        },
+                        data: { game_progress: updatedProgress }
+                    });
+                }
+            } catch (error) {
+                console.error('Error updating cache after deletion:', error);
             }
+        },
+        onError: (error) => {
+            console.error('Error deleting game:', error);
         }
     });
 
@@ -143,15 +112,22 @@ const GameCollection: React.FC = () => {
 
     const handleDelete = async (gameId: number) => {
         if (!user?.id) return;
+        
         try {
-            await deleteGame({
+            const result = await deleteGame({
                 variables: { 
                     userId: user.id,
                     gameId 
                 }
             });
+
+            if (!result.data?.delete_game_progress?.affected_rows) {
+                throw new Error('Failed to delete game');
+            }
         } catch (error) {
             console.error('Error deleting game:', error);
+            // You might want to show this error to the user in a more user-friendly way
+            alert('Failed to delete game. Please try again.');
         }
     };
 
@@ -246,9 +222,7 @@ const GameCollection: React.FC = () => {
                             <GameCard
                                 game={game}
                                 onStatusChange={(status) => handleStatusChange(game.id, status)}
-                                actions={
-                                    <DropdownMenu onDelete={() => handleDelete(game.id)} />
-                                }
+                                onDelete={() => handleDelete(game.id)}
                             />
                         </div>
                     ))}
