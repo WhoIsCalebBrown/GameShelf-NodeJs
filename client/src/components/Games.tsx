@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import DataComponent from '../DataComponent';
+import DataComponent from './DataComponent.tsx';
 import GameStats from './GameStats';
 import GameSearch from './GameSearch';
 

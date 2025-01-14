@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation } from '@apollo/client';
-import { UPDATE_GAME_STATUS, UPDATE_GAME_PROGRESS, UPDATE_GAME_COMPETITIVE, GET_DATA } from '../queries';
+import { UPDATE_GAME_STATUS, UPDATE_GAME_PROGRESS, UPDATE_GAME_COMPETITIVE, GET_DATA } from '../queries/queries.ts';
 import { Game, game_status } from '../types/game';
 import { useAuth } from '../context/AuthContext';
 import { getRankColor, getPeakRankColor } from '../utils/rankColors';

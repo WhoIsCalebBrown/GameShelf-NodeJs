@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@apollo/client';
-import { GET_DATA } from '../queries';
+import { GET_DATA } from '../queries/queries.ts';
 import { GameStatus } from '../types/game';
 import { useAuth } from '../context/AuthContext';
 

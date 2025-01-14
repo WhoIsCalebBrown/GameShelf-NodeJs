@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@apollo/client';
-import { GET_DATA, UPDATE_GAME_STATUS } from './queries';
-import { useAuth } from './context/AuthContext';
-import { game_status } from './types/game';
+import { GET_DATA, UPDATE_GAME_STATUS } from '../queries/queries.ts';
+import { useAuth } from '../context/AuthContext.tsx';
+import { game_status } from '../types/game.ts';
 
 const LoadingSpinner = () => <p className="text-center">Loading...</p>;
 const ErrorMessage: React.FC<{ message: string }> = ({ message }) => (

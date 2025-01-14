@@ -1,5 +1,4 @@
 import { gql } from '@apollo/client';
-
 export const GET_DATA = gql`
     query GetUserGames($userId: Int!, $orderBy: [game_progress_order_by!]) {
         game_progress(
@@ -30,10 +29,10 @@ export const GET_DATA = gql`
 
 export const ADD_GAME = gql`
     mutation AddGame(
-        $name: String!, 
-        $description: String, 
-        $year: Int!, 
-        $igdb_id: Int!, 
+        $name: String!,
+        $description: String,
+        $year: Int,
+        $igdb_id: Int!,
         $slug: String!,
         $cover_url: String
     ) {
@@ -47,9 +46,8 @@ export const ADD_GAME = gql`
                 cover_url: $cover_url
             },
             on_conflict: {
-                constraint: Games_pkey,
-                update_columns: [name, description, year, slug, cover_url]
-            }
+                update_columns: [name, description, year, slug, cover_url], 
+                constraint: games_igdb_id_key}
         ) {
             id
             name
@@ -62,18 +60,28 @@ export const ADD_GAME = gql`
     }
 `;
 
+
+
+
 export const ADD_GAME_PROGRESS = gql`
     mutation AddGameProgress(
         $userId: Int!,
-        $gameId: Int!
+        $gameId: Int!,
+        $playtimeMinutes: Int = 0,
+        $lastPlayed: timestamptz
     ) {
         insert_game_progress_one(
             object: {
                 user_id: $userId,
                 game_id: $gameId,
                 status: "NOT_STARTED",
-                playtime_minutes: 0,
+                playtime_minutes: $playtimeMinutes,
+                last_played_at: $lastPlayed,
                 completion_percentage: 0
+            },
+            on_conflict: {
+                constraint: game_progress_user_id_game_id_key,
+                update_columns: [playtime_minutes, last_played_at]
             }
         ) {
             id
@@ -91,6 +99,8 @@ export const ADD_GAME_PROGRESS = gql`
         }
     }
 `;
+
+
 
 export const DELETE_GAME = gql`
     mutation DeleteGameProgress($userId: Int!, $gameId: Int!) {

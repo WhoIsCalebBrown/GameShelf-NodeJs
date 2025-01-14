@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, NetworkStatus } from '@apollo/client';
-import { GET_DATA, DELETE_GAME, UPDATE_GAME_STATUS } from '../queries';
+import { GET_DATA, DELETE_GAME, UPDATE_GAME_STATUS } from '../queries/queries.ts';
 import GameCard from './GameCard';
 import { Game, GameStatus } from '../types/game';
 import GameStats from './GameStats';
+import SteamImport from './SteamImport';
 import { useAuth } from '../context/AuthContext';
 
 type SortField = 'name' | 'status' | 'year';
@@ -20,6 +21,7 @@ const GameCollection: React.FC = () => {
         field: 'name',
         order: 'asc'
     });
+    const [showSteamImport, setShowSteamImport] = useState(false);
 
     const { loading, error, data, networkStatus } = useQuery(GET_DATA, {
         variables: {
@@ -202,6 +204,17 @@ const GameCollection: React.FC = () => {
                     <SortButton field="year" label="Release Date" />
                 </div>
             </div>
+            
+            <div className="flex justify-end">
+                <button
+                    onClick={() => setShowSteamImport(!showSteamImport)}
+                    className="px-4 py-2 bg-primary-500 hover:bg-primary-600 rounded-lg"
+                >
+                    {showSteamImport ? 'Hide Steam Import' : 'Import from Steam'}
+                </button>
+            </div>
+
+            {showSteamImport && <SteamImport />}
             
             <GameStats games={games} />
             
