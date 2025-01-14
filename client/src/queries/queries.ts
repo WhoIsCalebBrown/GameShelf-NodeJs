@@ -1,4 +1,5 @@
-import { gql } from '@apollo/client';
+import {gql} from '@apollo/client';
+
 export const GET_DATA = gql`
     query GetUserGames($userId: Int!, $orderBy: [game_progress_order_by!]) {
         game_progress(
@@ -46,7 +47,7 @@ export const ADD_GAME = gql`
                 cover_url: $cover_url
             },
             on_conflict: {
-                update_columns: [name, description, year, slug, cover_url], 
+                update_columns: [name, description, year, slug, cover_url],
                 constraint: games_igdb_id_key}
         ) {
             id
@@ -59,9 +60,6 @@ export const ADD_GAME = gql`
         }
     }
 `;
-
-
-
 
 export const ADD_GAME_PROGRESS = gql`
     mutation AddGameProgress(
@@ -99,7 +97,6 @@ export const ADD_GAME_PROGRESS = gql`
         }
     }
 `;
-
 
 
 export const DELETE_GAME = gql`

@@ -263,17 +263,17 @@ const SteamImport: React.FC = () => {
                     <div className="space-y-2">
                         <div className="flex justify-between text-sm text-gray-400">
                             <span>{importProgress.message}</span>
-                            <span>{importProgress.current}/100</span>
+                            <span>{importProgress.current}/{importProgress.total}</span>
                         </div>
                         <div className="w-full bg-gray-800 rounded-full h-3 overflow-hidden border border-gray-700">
-                            <div 
+                            <div
                                 className={`h-full transition-all duration-300 rounded-full ${
-                                    importProgress.stage === 'complete' 
-                                        ? 'bg-green-500' 
+                                    importProgress.stage === 'complete'
+                                        ? 'bg-green-500'
                                         : 'bg-blue-500'
                                 }`}
-                                style={{ 
-                                    width: `${importProgress.current}%`,
+                                style={{
+                                    width: `${(importProgress.current / importProgress.total) * 100}%`,
                                     transition: 'width 0.3s ease-in-out'
                                 }}
                             />
