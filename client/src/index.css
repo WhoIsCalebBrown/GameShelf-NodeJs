@@ -6,6 +6,29 @@
   body {
     @apply bg-dark-light text-white min-h-screen;
   }
+
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #4B5563 #1F2937;
+  }
+
+  /* Chrome, Edge, Safari */
+  *::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  *::-webkit-scrollbar-track {
+    @apply bg-dark;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    @apply bg-gray-600 rounded-full;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500;
+  }
 }
 
 @layer components {

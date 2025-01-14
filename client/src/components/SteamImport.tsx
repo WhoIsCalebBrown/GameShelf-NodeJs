@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { useMutation } from '@apollo/client';
-import { ADD_GAME, ADD_GAME_PROGRESS, BULK_ADD_GAMES, BULK_ADD_GAME_PROGRESS  } from '../queries/queries.ts';
-import { useAuth } from '../context/AuthContext';
-import { importSteamLibrary, exportToSteamFormat } from '../services/steam';
-import { Game } from '../types/game';
+import React, {useState} from 'react';
+import {useMutation} from '@apollo/client';
+import {ADD_GAME, ADD_GAME_PROGRESS, BULK_ADD_GAMES, BULK_ADD_GAME_PROGRESS} from '../queries/queries.ts';
+import {useAuth} from '../context/AuthContext';
+import {importSteamLibrary, exportToSteamFormat} from '../services/steam';
+import {Game} from '../types/game';
 
 interface ImportStatus {
     [key: number]: {
@@ -20,7 +20,7 @@ interface ImportProgress {
 }
 
 const SteamImport: React.FC = () => {
-    const { user } = useAuth();
+    const {user} = useAuth();
     const [steamId, setSteamId] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -62,7 +62,7 @@ const SteamImport: React.FC = () => {
                     });
                 }
             });
-            
+
             setImportProgress({
                 stage: 'complete',
                 current: 100,
@@ -97,7 +97,7 @@ const SteamImport: React.FC = () => {
         // Initialize status
         const initialStatus: ImportStatus = {};
         selectedGamesList.forEach(game => {
-            initialStatus[game.id] = { status: 'pending' };
+            initialStatus[game.id] = {status: 'pending'};
         });
         setImportStatus(initialStatus);
 
@@ -111,7 +111,7 @@ const SteamImport: React.FC = () => {
 
         try {
             // Bulk insert games
-            const { data: gameData } = await bulkAddGames({
+            const {data: gameData} = await bulkAddGames({
                 variables: {
                     games: selectedGamesList.map(game => ({
                         name: game.name,
@@ -144,13 +144,14 @@ const SteamImport: React.FC = () => {
                             new Date(selectedGamesList.find(g => g.igdb_id === game.igdb_id)!.rtime_last_played * 1000).toISOString() :
                             null
                     }))
-                }
+                },
+                refetchQueries: ['GetUserGames']
             });
 
             // Update all statuses to success
             const successStatus: ImportStatus = {};
             selectedGamesList.forEach(game => {
-                successStatus[game.id] = { status: 'success' };
+                successStatus[game.id] = {status: 'success'};
             });
             setImportStatus(successStatus);
 
@@ -161,6 +162,7 @@ const SteamImport: React.FC = () => {
                 total: selectedGamesList.length,
                 message: 'Import complete!'
             });
+
 
             // Clear everything after delay
             setTimeout(() => {
@@ -192,7 +194,7 @@ const SteamImport: React.FC = () => {
         if (!importedGames.length) return;
 
         const jsonStr = exportToSteamFormat(importedGames);
-        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const blob = new Blob([jsonStr], {type: 'application/json'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -219,7 +221,7 @@ const SteamImport: React.FC = () => {
 
     const matchedGames = importedGames.filter(game => game.igdb_id !== 0);
     const unmatchedGames = importedGames.filter(game => game.igdb_id === 0);
-    const allSelected = filteredGames.length > 0 && 
+    const allSelected = filteredGames.length > 0 &&
         filteredGames.every(game => selectedGames.has(game.id));
 
     return (
@@ -244,7 +246,7 @@ const SteamImport: React.FC = () => {
                     <button
                         onClick={handleImport}
                         disabled={isLoading}
-                        className="px-4 py-2 bg-primary-500 hover:bg-primary-600 rounded-lg disabled:opacity-50"
+                        className="btn px-4 py-2 bg-primary-500 hover:bg-primary-600 rounded-lg transition-colors disabled:opacity-50"
                     >
                         {isLoading ? 'Importing...' : 'Import from Steam'}
                     </button>
@@ -280,7 +282,7 @@ const SteamImport: React.FC = () => {
                                     Imported Games ({selectedGames.size} selected)
                                 </h3>
                                 <p className="text-sm text-gray-400">
-                                    ✅ Matched: {matchedGames.length} games | 
+                                    ✅ Matched: {matchedGames.length} games |
                                     ❌ Unmatched: {unmatchedGames.length} games
                                 </p>
                             </div>
@@ -321,7 +323,7 @@ const SteamImport: React.FC = () => {
                             <button
                                 onClick={() => setShowUnmatched(!showUnmatched)}
                                 className={`px-4 py-2 rounded-lg border ${
-                                    showUnmatched 
+                                    showUnmatched
                                         ? 'bg-red-500/10 text-red-500 border-red-500'
                                         : 'bg-dark-light text-gray-400 border-gray-700'
                                 }`}
@@ -330,13 +332,15 @@ const SteamImport: React.FC = () => {
                             </button>
                         </div>
 
-                        <div className="space-y-2 max-h-96 overflow-y-auto">
+                        <div className="space-y-2 max-h-96 overflow-y-auto
+                                        scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800
+                                        hover:scrollbar-thumb-gray-600">
                             {filteredGames.map(game => (
                                 <div
                                     key={game.id}
                                     className={`flex items-center gap-4 p-3 rounded-lg ${
-                                        game.igdb_id === 0 
-                                            ? 'bg-red-500/10 border border-red-500/20' 
+                                        game.igdb_id === 0
+                                            ? 'bg-red-500/10 border border-red-500/20'
                                             : 'bg-dark-light'
                                     }`}
                                 >
@@ -356,7 +360,7 @@ const SteamImport: React.FC = () => {
                                         disabled={importStatus[game.id]?.status === 'importing'}
                                     />
                                     {game.cover_url ? (
-                                        <img 
+                                        <img
                                             src={game.cover_url}
                                             alt={game.name}
                                             className="w-16 h-20 object-cover rounded"
@@ -370,38 +374,52 @@ const SteamImport: React.FC = () => {
                                         <div className="flex items-center gap-2">
                                             <h4 className="font-medium">{game.name}</h4>
                                             {game.igdb_id === 0 && (
-                                                <span className="text-xs text-red-500 bg-red-500/10 px-2 py-0.5 rounded">
+                                                <span
+                                                    className="text-xs text-red-500 bg-red-500/10 px-2 py-0.5 rounded">
                                                     No IGDB Match
                                                 </span>
                                             )}
                                             {importStatus[game.id] && (
                                                 <div className="flex items-center gap-2">
                                                     {importStatus[game.id].status === 'pending' && (
-                                                        <span className="text-xs text-gray-400 bg-gray-400/10 px-2 py-0.5 rounded">
+                                                        <span
+                                                            className="text-xs text-gray-400 bg-gray-400/10 px-2 py-0.5 rounded">
                                                             Pending
                                                         </span>
                                                     )}
                                                     {importStatus[game.id].status === 'importing' && (
-                                                        <span className="text-xs text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded flex items-center gap-1">
+                                                        <span
+                                                            className="text-xs text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded flex items-center gap-1">
                                                             <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
-                                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                                                <circle className="opacity-25" cx="12" cy="12" r="10"
+                                                                        stroke="currentColor" strokeWidth="4"
+                                                                        fill="none"/>
+                                                                <path className="opacity-75" fill="currentColor"
+                                                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
                                                             </svg>
                                                             Importing
                                                         </span>
                                                     )}
                                                     {importStatus[game.id].status === 'success' && (
-                                                        <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded flex items-center gap-1">
-                                                            <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                        <span
+                                                            className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded flex items-center gap-1">
+                                                            <svg className="h-3 w-3" viewBox="0 0 20 20"
+                                                                 fill="currentColor">
+                                                                <path fillRule="evenodd"
+                                                                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                                      clipRule="evenodd"/>
                                                             </svg>
                                                             Added
                                                         </span>
                                                     )}
                                                     {importStatus[game.id].status === 'error' && (
-                                                        <span className="text-xs text-red-500 bg-red-500/10 px-2 py-0.5 rounded flex items-center gap-1">
-                                                            <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                                        <span
+                                                            className="text-xs text-red-500 bg-red-500/10 px-2 py-0.5 rounded flex items-center gap-1">
+                                                            <svg className="h-3 w-3" viewBox="0 0 20 20"
+                                                                 fill="currentColor">
+                                                                <path fillRule="evenodd"
+                                                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                                                      clipRule="evenodd"/>
                                                             </svg>
                                                             Failed
                                                         </span>
