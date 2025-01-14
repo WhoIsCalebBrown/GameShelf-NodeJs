@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation } from '@apollo/client';
-import { ADD_GAME, ADD_GAME_PROGRESS } from '../queries/queries.ts';
+import { ADD_GAME, ADD_GAME_PROGRESS, BULK_ADD_GAMES, BULK_ADD_GAME_PROGRESS  } from '../queries/queries.ts';
 import { useAuth } from '../context/AuthContext';
 import { importSteamLibrary, exportToSteamFormat } from '../services/steam';
 import { Game } from '../types/game';
@@ -30,6 +30,8 @@ const SteamImport: React.FC = () => {
     const [showUnmatched, setShowUnmatched] = useState(false);
     const [importStatus, setImportStatus] = useState<ImportStatus>({});
     const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
+    const [bulkAddGames] = useMutation(BULK_ADD_GAMES);
+    const [bulkAddGameProgress] = useMutation(BULK_ADD_GAME_PROGRESS);
 
     const [addGame] = useMutation(ADD_GAME);
     const [addGameProgress] = useMutation(ADD_GAME_PROGRESS);
@@ -84,21 +86,22 @@ const SteamImport: React.FC = () => {
         }
     };
 
-    const handleAddToCollection = async () => {
+    const handleBulkImport = async () => {
         if (!user) return;
 
         setIsLoading(true);
         setError(null);
 
-        // Initialize status for selected games
-        const initialStatus: ImportStatus = {};
         const selectedGamesList = importedGames.filter(game => selectedGames.has(game.id));
+
+        // Initialize status
+        const initialStatus: ImportStatus = {};
         selectedGamesList.forEach(game => {
             initialStatus[game.id] = { status: 'pending' };
         });
         setImportStatus(initialStatus);
 
-        // Set up import progress
+        // Set up progress
         setImportProgress({
             stage: 'importing',
             current: 0,
@@ -107,90 +110,78 @@ const SteamImport: React.FC = () => {
         });
 
         try {
-            let successCount = 0;
-            for (const game of selectedGamesList) {
-                // Update status to importing
-                setImportStatus(prev => ({
-                    ...prev,
-                    [game.id]: { status: 'importing' }
-                }));
-
-                try {
-                    // First, add the game to the games table
-                    const { data: gameData } = await addGame({
-                        variables: {
-                            name: game.name,
-                            description: game.description,
-                            year: game.year,
-                            igdb_id: game.igdb_id,
-                            slug: game.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-                            cover_url: game.cover_url
-                        }
-                    });
-
-                    // Then add the game progress
-                    await addGameProgress({
-                        variables: {
-                            userId: user.id,
-                            gameId: gameData.insert_games_one.id,
-                            playtimeMinutes: game.playtime_minutes,
-                            lastPlayed: new Date(game.rtime_last_played * 1000).toISOString().replace('Z', '+00:00'),
-                        }
-                    });
-
-                    // Update status to success
-                    setImportStatus(prev => ({
-                        ...prev,
-                        [game.id]: { status: 'success' }
-                    }));
-
-                    // Update progress
-                    successCount++;
-                    setImportProgress({
-                        stage: 'importing',
-                        current: successCount,
-                        total: selectedGamesList.length,
-                        message: `Adding games to collection (${successCount}/${selectedGamesList.length})...`
-                    });
-
-                } catch (error) {
-                    // Update status to error
-                    setImportStatus(prev => ({
-                        ...prev,
-                        [game.id]: { 
-                            status: 'error',
-                            error: error instanceof Error ? error.message : 'Failed to import game'
-                        }
-                    }));
+            // Bulk insert games
+            const { data: gameData } = await bulkAddGames({
+                variables: {
+                    games: selectedGamesList.map(game => ({
+                        name: game.name,
+                        description: game.description || 'No description available',
+                        year: game.year || 0,
+                        igdb_id: game.igdb_id,
+                        slug: game.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                        cover_url: game.cover_url
+                    }))
                 }
+            });
 
-                // Add a small delay between imports
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
+            // Update progress halfway
+            setImportProgress({
+                stage: 'importing',
+                current: Math.floor(selectedGamesList.length / 2),
+                total: selectedGamesList.length,
+                message: `Adding game progress...`
+            });
 
-            // Check if all imports were successful
-            const allSuccess = Object.values(importStatus).every(
-                status => status.status === 'success'
-            );
+            // Bulk insert progress records
+            await bulkAddGameProgress({
+                variables: {
+                    progresses: gameData.insert_games.returning.map(game => ({
+                        user_id: user.id,
+                        game_id: game.id,
+                        status: "NOT_STARTED",
+                        playtime_minutes: selectedGamesList.find(g => g.igdb_id === game.igdb_id)?.playtime_minutes || 0,
+                        last_played_at: selectedGamesList.find(g => g.igdb_id === game.igdb_id)?.rtime_last_played ?
+                            new Date(selectedGamesList.find(g => g.igdb_id === game.igdb_id)!.rtime_last_played * 1000).toISOString() :
+                            null
+                    }))
+                }
+            });
 
-            if (allSuccess) {
-                setImportProgress({
-                    stage: 'complete',
-                    current: selectedGamesList.length,
-                    total: selectedGamesList.length,
-                    message: 'Import complete!'
-                });
+            // Update all statuses to success
+            const successStatus: ImportStatus = {};
+            selectedGamesList.forEach(game => {
+                successStatus[game.id] = { status: 'success' };
+            });
+            setImportStatus(successStatus);
 
-                // Clear everything after a delay
-                setTimeout(() => {
-                    setImportedGames([]);
-                    setSelectedGames(new Set());
-                    setImportStatus({});
-                    setImportProgress(null);
-                }, 2000);
-            }
+            // Show completion
+            setImportProgress({
+                stage: 'complete',
+                current: selectedGamesList.length,
+                total: selectedGamesList.length,
+                message: 'Import complete!'
+            });
+
+            // Clear everything after delay
+            setTimeout(() => {
+                setImportedGames([]);
+                setSelectedGames(new Set());
+                setImportStatus({});
+                setImportProgress(null);
+            }, 2000);
+
         } catch (error) {
             setError(error instanceof Error ? error.message : 'Failed to add games to collection');
+
+            // Update all statuses to error
+            const errorStatus: ImportStatus = {};
+            selectedGamesList.forEach(game => {
+                errorStatus[game.id] = {
+                    status: 'error',
+                    error: 'Bulk import failed'
+                };
+            });
+            setImportStatus(errorStatus);
             setImportProgress(null);
         } finally {
             setIsLoading(false);
@@ -295,7 +286,7 @@ const SteamImport: React.FC = () => {
                             </div>
                             <div className="flex gap-2">
                                 <button
-                                    onClick={handleAddToCollection}
+                                    onClick={handleBulkImport}
                                     disabled={isLoading || selectedGames.size === 0}
                                     className="px-4 py-2 bg-green-500 hover:bg-green-600 rounded-lg disabled:opacity-50"
                                 >
