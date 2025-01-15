@@ -16,6 +16,7 @@ export interface Game {
     current_rank?: string;
     peak_rank?: string;
     notes?: string;
+    is_favorite?: boolean;
     rtime_last_played?: number;
 }
 

@@ -23,7 +23,7 @@ export interface GraphQLResponse<T> {
 }
 
 export interface SortConfig {
-    field: 'name' | 'status' | 'year';
+    field: 'name' | 'status' | 'year' | 'last_played_at' | 'playtime_minutes';
     order: 'asc' | 'desc';
 }
 

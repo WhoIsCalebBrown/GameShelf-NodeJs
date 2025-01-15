@@ -14,6 +14,7 @@ export const GET_DATA = gql`
             notes
             current_rank
             peak_rank
+            is_favorite
             game {
                 id
                 name
@@ -216,6 +217,25 @@ export const BULK_ADD_GAME_PROGRESS = gql`
                 id
                 game_id
                 user_id
+            }
+        }
+    }
+`;
+
+export const UPDATE_GAME_FAVORITE = gql`
+    mutation UpdateGameFavorite($userId: Int!, $gameId: Int!, $isFavorite: Boolean!) {
+        update_game_progress(
+            where: {
+                user_id: { _eq: $userId },
+                game_id: { _eq: $gameId }
+            },
+            _set: {
+                is_favorite: $isFavorite
+            }
+        ) {
+            returning {
+                id
+                is_favorite
             }
         }
     }

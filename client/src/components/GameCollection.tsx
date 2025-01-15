@@ -9,7 +9,7 @@ import GameStats from './GameStats';
 import SteamImport from './SteamImport';
 import {useAuth} from '../context/AuthContext';
 
-type SortField = 'name' | 'status' | 'year';
+type SortField = 'name' | 'status' | 'year' | 'last_played_at' | 'playtime_minutes';
 
 const GameCollection: React.FC = () => {
     const {user} = useAuth();
@@ -18,12 +18,17 @@ const GameCollection: React.FC = () => {
         order: 'asc'
     });
     const [showSteamImport, setShowSteamImport] = useState(false);
+    const [groupUnplayed, setGroupUnplayed] = useState(false);
 
     const {loading, error, data, networkStatus} = useQuery(GET_DATA, {
         variables: {
             userId: user?.id,
             orderBy: sortConfig.field === 'status'
                 ? [{status: sortConfig.order}]
+                : sortConfig.field === 'last_played_at'
+                ? [{last_played_at: sortConfig.order + '_nulls_last'}]
+                : sortConfig.field === 'playtime_minutes'
+                ? [{playtime_minutes: sortConfig.order}]
                 : [{game: {[sortConfig.field]: sortConfig.order}}]
         },
         fetchPolicy: 'cache-and-network',
@@ -174,8 +179,23 @@ const GameCollection: React.FC = () => {
         last_played_at: progress.last_played_at,
         notes: progress.notes,
         current_rank: progress.current_rank,
-        peak_rank: progress.peak_rank
+        peak_rank: progress.peak_rank,
+        is_favorite: progress.is_favorite
     }));
+
+    const favoriteGames = games.filter(game => game.is_favorite);
+    const regularGames = games.filter(game => !game.is_favorite);
+
+    // Split games into played and unplayed regardless of sort order if groupUnplayed is true
+    const { playedGames, neverPlayedGames } = groupUnplayed
+        ? {
+            playedGames: regularGames.filter(game => game.last_played_at !== null),
+            neverPlayedGames: regularGames.filter(game => game.last_played_at === null)
+        }
+        : {
+            playedGames: regularGames,
+            neverPlayedGames: []
+        };
 
     const showLoading = loading && networkStatus === NetworkStatus.loading;
 
@@ -191,30 +211,41 @@ const GameCollection: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <div
-                className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 bg-dark p-4 rounded-lg">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 bg-dark p-4 rounded-lg">
                 <div className="flex flex-col sm:flex-row justify-between gap-3">
                     <h2 className="text-2xl font-bold">My Game Collection</h2>
-                    <button
-                        onClick={() => setShowSteamImport(!showSteamImport)}
-                        className={`
-                            px-4 py-2 rounded-lg font-medium 'bg-primary-500 text-white shadow-lg'
-                            ${showSteamImport
-                            ? 'bg-primary-500 text-white shadow-lg'
-                            : 'bg-dark-light hover:bg-primary-500/20 text-gray-300'
-                        } 
-                            transition-all duration-200 flex items-center gap-2
-                        `}
-                    >
-                        {showSteamImport ? 'Hide Steam Import' : 'Import from Steam'}
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setShowSteamImport(!showSteamImport)}
+                            className={`
+                                px-4 py-2 rounded-lg font-medium
+                                ${showSteamImport
+                                ? 'bg-primary-500 text-white shadow-lg'
+                                : 'bg-dark-light hover:bg-primary-500/20 text-gray-300'
+                            } 
+                                transition-all duration-200 flex items-center gap-2
+                            `}
+                        >
+                            {showSteamImport ? 'Hide Steam Import' : 'Import from Steam'}
+                        </button>
+                        <label className="flex items-center gap-2 text-gray-300">
+                            <input
+                                type="checkbox"
+                                checked={groupUnplayed}
+                                onChange={(e) => setGroupUnplayed(e.target.checked)}
+                                className="form-checkbox h-4 w-4 text-primary-500 rounded bg-dark-light border-gray-600 focus:ring-primary-500"
+                            />
+                            Group Unplayed Games
+                        </label>
+                    </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                     <span className="text-gray-400 self-center mr-2">Sort by:</span>
                     <SortButton field="name" label="Name"/>
                     <SortButton field="status" label="Status"/>
                     <SortButton field="year" label="Release Date"/>
-
+                    <SortButton field="last_played_at" label="Last Played"/>
+                    <SortButton field="playtime_minutes" label="Playtime"/>
                 </div>
             </div>
 
@@ -233,17 +264,72 @@ const GameCollection: React.FC = () => {
                     <div className="text-red-500">Error: {error.message}</div>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-w-[1600px] mx-auto">
-                    {games.map((game: Game) => (
-                        <div key={game.id} className="transition-all duration-300 ease-in-out">
-                            <GameCard
-                                game={game}
-                                onStatusChange={(status) => handleStatusChange(game.id, status)}
-                                onDelete={() => handleDelete(game.id)}
-                            />
+                <>
+                    {/* Favorite Games Section */}
+                    {favoriteGames.length > 0 && (
+                        <div className="space-y-4">
+                            <h3 className="text-xl font-semibold text-primary-400">Favorite Games</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                {favoriteGames.map((game: Game) => (
+                                    <div key={game.id} className="transition-all duration-300 ease-in-out">
+                                        <GameCard
+                                            game={game}
+                                            onStatusChange={(status) => handleStatusChange(game.id, status)}
+                                            onDelete={() => handleDelete(game.id)}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    ))}
-                </div>
+                    )}
+
+                    {/* Regular Games Section */}
+                    <div className="space-y-4">
+                        {(favoriteGames.length > 0 || groupUnplayed) && (
+                            <h3 className="text-xl font-semibold">
+                                {groupUnplayed ? 'Played Games' : 'All Games'}
+                            </h3>
+                        )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {playedGames.map((game: Game) => (
+                                <div key={game.id} className="transition-all duration-300 ease-in-out">
+                                    <GameCard
+                                        game={game}
+                                        onStatusChange={(status) => handleStatusChange(game.id, status)}
+                                        onDelete={() => handleDelete(game.id)}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Never Played Section - Shown when groupUnplayed is true */}
+                        {groupUnplayed && neverPlayedGames.length > 0 && (
+                            <>
+                                <div className="relative my-12">
+                                    <div className="absolute inset-0 flex items-center">
+                                        <div className="w-full border-t-2 border-gray-700"></div>
+                                    </div>
+                                    <div className="relative flex justify-center my-28">
+                                        <span className="px-6 py-2 bg-dark text-gray-200 text-xl font-semibold rounded-full border-2 border-gray-700">
+                                            Never Played
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                    {neverPlayedGames.map((game: Game) => (
+                                        <div key={game.id} className="transition-all duration-300 ease-in-out">
+                                            <GameCard
+                                                game={game}
+                                                onStatusChange={(status) => handleStatusChange(game.id, status)}
+                                                onDelete={() => handleDelete(game.id)}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </>
             )}
         </div>
     );
