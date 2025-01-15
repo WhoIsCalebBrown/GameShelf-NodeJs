@@ -30,6 +30,7 @@ passport.use(new SteamStrategy({
                     id
                     username
                     email
+                    steam_id
                     created_at
                     updated_at
                 }
@@ -58,15 +59,17 @@ passport.use(new SteamStrategy({
 
         // Create new user without a username (will be set later)
         const createUserMutation = `
-            mutation createUser($email: String!, $username: String!) {
+            mutation createUser($email: String!, $username: String!, $steamId: String!) {
                 insert_users_one(object: {
                     email: $email,
                     username: $username,
-                    password_hash: "steam_auth"
+                    password_hash: "steam_auth",
+                    steam_id: $steamId
                 }) {
                     id
                     username
                     email
+                    steam_id
                     created_at
                     updated_at
                 }
@@ -83,7 +86,8 @@ passport.use(new SteamStrategy({
                 query: createUserMutation,
                 variables: { 
                     email,
-                    username: `steam_${steamId}` // Temporary username that will be updated
+                    username: `steam_${steamId}`,
+                    steamId: steamId
                 }
             })
         });
