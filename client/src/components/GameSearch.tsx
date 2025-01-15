@@ -1,49 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { searchgames, getTrendinggames } from '../services/igdb';
 import { useMutation } from '@apollo/client';
-import { ADD_GAME, ADD_GAME_PROGRESS, GET_DATA } from '../queries/queries.ts';
+import { ADD_GAME, ADD_GAME_PROGRESS, GET_DATA } from '../queries/queries';
+import { IGDBGame } from '../types/game';
+import { GameSearchProps } from '../types/props';
 import { useAuth } from '../context/AuthContext';
-
-interface IGDBGame {
-    id: number;
-    name: string;
-    summary: string;
-    first_release_date?: number;
-    cover?: {
-        url: string;
-    };
-    slug: string;
-    rating?: number;
-    total_rating?: number;
-    game_modes?: Array<{
-        id: number;
-        name: string;
-    }>;
-    genres?: Array<{
-        id: number;
-        name: string;
-    }>;
-    platforms?: Array<{
-        id: number;
-        name: string;
-    }>;
-    themes?: Array<{
-        id: number;
-        name: string;
-    }>;
-    involved_companies?: Array<{
-        company: {
-            id: number;
-            name: string;
-        };
-        developer: boolean;
-        publisher: boolean;
-    }>;
-}
 
 interface GameCardProps {
     game: IGDBGame;
-    onAddGame: (game: IGDBGame) => void;
+    onAddGame: (game: IGDBGame) => Promise<void>;
 }
 
 const GameCard: React.FC<GameCardProps> = ({ game, onAddGame }) => {
@@ -164,7 +129,7 @@ const GameCard: React.FC<GameCardProps> = ({ game, onAddGame }) => {
             <div className="mt-4">
                 <button 
                     onClick={() => onAddGame(game)}
-                    className="btn w-full bg-primary-500 hover:bg-primary-600 transition-colors"
+                    className="flex-1 bg-primary-500 hover:bg-primary-600 text-white rounded-lg py-2"
                 >
                     Add to Collection
                 </button>
@@ -173,7 +138,7 @@ const GameCard: React.FC<GameCardProps> = ({ game, onAddGame }) => {
     );
 };
 
-const GameSearch: React.FC = () => {
+const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
     const { user } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
     const [unfilteredResults, setUnfilteredResults] = useState<IGDBGame[]>([]);
@@ -287,45 +252,38 @@ const GameSearch: React.FC = () => {
     };
 
     const handleAddGame = async (game: IGDBGame) => {
-        if (!user?.id) {
+        if (!user) {
             setError('Please sign in to add games to your collection');
             return;
         }
 
         try {
-            const coverUrl = game.cover 
-                ? game.cover.url.replace('t_thumb', 't_cover_big')
-                : null;
-
-            // Extract just the year from the release date
-            const year = game.first_release_date 
-                ? new Date(game.first_release_date * 1000).getFullYear()
-                : new Date().getFullYear();
-
-            // First, add the game
-            const { data: gameData } = await addGame({
+            const result = await addGame({
                 variables: {
                     name: game.name,
                     description: game.summary,
-                    year: year,
+                    year: game.first_release_date ? new Date(game.first_release_date * 1000).getFullYear() : null,
                     igdb_id: game.id,
                     slug: game.slug,
-                    cover_url: coverUrl
+                    cover_url: game.cover?.url
                 }
             });
 
-            // Then create the game progress
-            await addGameProgress({
-                variables: {
-                    userId: user.id,
-                    gameId: gameData.insert_games_one.id
-                }
-            });
+            if (result.data?.insert_games_one) {
+                await addGameProgress({
+                    variables: {
+                        userId: user.id,
+                        gameId: result.data.insert_games_one.id
+                    }
+                });
 
-            setUnfilteredResults(results => results.filter(g => g.id !== game.id));
+                if (onGameSelect) {
+                    onGameSelect(result.data.insert_games_one);
+                }
+            }
         } catch (error) {
             console.error('Error adding game:', error);
-            setError(`Failed to add game: ${error.message}`);
+            setError(`Failed to add game: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     };
 

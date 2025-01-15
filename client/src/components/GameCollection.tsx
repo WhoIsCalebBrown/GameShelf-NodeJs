@@ -1,19 +1,15 @@
 import React, {useState} from 'react';
 import {useQuery, useMutation, NetworkStatus} from '@apollo/client';
-import {GET_DATA, DELETE_GAME, UPDATE_GAME_STATUS} from '../queries/queries.ts';
+import {GET_DATA, DELETE_GAME, UPDATE_GAME_STATUS} from '../queries/queries';
 import GameCard from './GameCard';
-import {Game, GameStatus} from '../types/game';
+import {Game, game_status} from '../types/game';
+import {SortConfig} from '../types/api';
+import {SortButtonProps} from '../types/props';
 import GameStats from './GameStats';
 import SteamImport from './SteamImport';
 import {useAuth} from '../context/AuthContext';
 
 type SortField = 'name' | 'status' | 'year';
-type SortOrder = 'asc' | 'desc';
-
-interface SortConfig {
-    field: SortField;
-    order: SortOrder;
-}
 
 const GameCollection: React.FC = () => {
     const {user} = useAuth();
@@ -133,7 +129,7 @@ const GameCollection: React.FC = () => {
         }
     };
 
-    const handleStatusChange = async (gameId: number, newStatus: GameStatus) => {
+    const handleStatusChange = async (gameId: number, newStatus: game_status) => {
         if (!user?.id) return;
         try {
             await updateGameStatus({
@@ -148,7 +144,7 @@ const GameCollection: React.FC = () => {
         }
     };
 
-    const SortButton: React.FC<{ field: SortField; label: string }> = ({field, label}) => (
+    const SortButton: React.FC<SortButtonProps> = ({field, label}) => (
         <button
             onClick={() => handleSort(field)}
             className={`

@@ -1,9 +1,5 @@
 import React from 'react';
-import { Game } from '../types/game';
-
-interface GameStatsProps {
-    games: Game[];
-}
+import { GameStatsProps } from '../types/props';
 
 const GameStats: React.FC<GameStatsProps> = ({ games }) => {
     const stats = {

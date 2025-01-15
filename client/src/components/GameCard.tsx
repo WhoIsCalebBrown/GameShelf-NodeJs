@@ -1,21 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation } from '@apollo/client';
-import { UPDATE_GAME_STATUS, UPDATE_GAME_PROGRESS, UPDATE_GAME_COMPETITIVE, GET_DATA } from '../queries/queries.ts';
-import { Game, game_status } from '../types/game';
+import { UPDATE_GAME_STATUS, UPDATE_GAME_PROGRESS, UPDATE_GAME_COMPETITIVE, GET_DATA } from '../queries/queries';
+import { game_status } from '../types/game';
+import { GameCardProps, DropdownMenuProps } from '../types/props';
 import { useAuth } from '../context/AuthContext';
 import { getRankColor, getPeakRankColor } from '../utils/rankColors';
-
-interface GameCardProps {
-    game: Game;
-    actions?: React.ReactNode;
-    onStatusChange?: (status: game_status) => void;
-    onDelete?: () => void;
-}
-
-interface DropdownMenuProps {
-    onDelete: () => void;
-    onEdit: () => void;
-}
 
 const DropdownMenu: React.FC<DropdownMenuProps> = ({ onDelete, onEdit }) => {
     const [isOpen, setIsOpen] = useState(false);

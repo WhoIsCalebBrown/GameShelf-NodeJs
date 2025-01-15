@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@apollo/client';
-import { GET_DATA } from '../queries/queries.ts';
-import { GameStatus } from '../types/game';
+import { GET_DATA } from '../queries/queries';
+import { game_status } from '../types/game';
 import { useAuth } from '../context/AuthContext';
 
 const Home: React.FC = () => {
@@ -15,7 +15,7 @@ const Home: React.FC = () => {
         skip: !user?.id
     });
 
-    const getStatusCount = (status: GameStatus) => {
+    const getStatusCount = (status: game_status) => {
         if (!data?.game_progress) return 0;
         return data.game_progress.filter((progress: any) => progress.status === status).length;
     };

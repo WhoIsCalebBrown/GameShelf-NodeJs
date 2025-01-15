@@ -16,10 +16,13 @@ export interface GameProgress {
     completion_percentage: number;
     last_played_at: string | null;
     notes: string | null;
+    current_rank: string | null;
+    peak_rank: string | null;
+    is_competitive: boolean;
     created_at: string;
     updated_at: string;
-    game: Game;  // This will be populated by Hasura's relationships
-    user: User;  // This will be populated by Hasura's relationships
+    game: Game;
+    user: User;
 }
 
 export interface UserGameStats {
@@ -28,4 +31,23 @@ export interface UserGameStats {
     average_completion: number;
     completed_games: number;
     in_progress_games: number;
+}
+
+export interface AuthResponse {
+    token: string;
+    user: User;
+}
+
+export interface ImportStatus {
+    [key: number]: {
+        status: 'pending' | 'importing' | 'success' | 'error';
+        error?: string;
+    };
+}
+
+export interface ImportProgress {
+    stage: 'fetching' | 'matching' | 'importing' | 'complete';
+    current: number;
+    total: number;
+    message: string;
 }

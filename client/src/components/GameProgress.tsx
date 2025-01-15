@@ -1,14 +1,7 @@
 import React, { useState } from 'react';
 import { useMutation } from '@apollo/client';
 import { UPDATE_GAME_PROGRESS } from '../queries/user';
-import { Game } from '../types/game';
-import { GameProgress as GameProgressType } from '../types/user';
-
-interface GameProgressProps {
-    game: Game;
-    progress?: GameProgressType;
-    userId: number;
-}
+import { GameProgressProps } from '../types/props';
 
 const GameProgress: React.FC<GameProgressProps> = ({ game, progress, userId }) => {
     const [isEditing, setIsEditing] = useState(false);
