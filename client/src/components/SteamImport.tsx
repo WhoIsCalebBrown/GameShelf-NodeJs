@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {useMutation} from '@apollo/client';
-import {ADD_GAME, ADD_GAME_PROGRESS, BULK_ADD_GAMES, BULK_ADD_GAME_PROGRESS} from '../queries/queries.ts';
+import {BULK_ADD_GAMES, BULK_ADD_GAME_PROGRESS} from '../queries/queries.ts';
 import {useAuth} from '../context/AuthContext';
 import {importSteamLibrary, exportToSteamFormat} from '../services/steam';
 import {Game} from '../types/game';
@@ -32,9 +32,6 @@ const SteamImport: React.FC = () => {
     const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
     const [bulkAddGames] = useMutation(BULK_ADD_GAMES);
     const [bulkAddGameProgress] = useMutation(BULK_ADD_GAME_PROGRESS);
-
-    const [addGame] = useMutation(ADD_GAME);
-    const [addGameProgress] = useMutation(ADD_GAME_PROGRESS);
 
     const handleImport = async () => {
         if (!steamId.trim()) {
@@ -109,18 +106,23 @@ const SteamImport: React.FC = () => {
             message: `Adding games to collection (0/${selectedGamesList.length})...`
         });
 
+
         try {
             // Bulk insert games
-            const {data: gameData} = await bulkAddGames({
+            const { data: gameData } = await bulkAddGames({
                 variables: {
-                    games: selectedGamesList.map(game => ({
-                        name: game.name,
-                        description: game.description || 'No description available',
-                        year: game.year || 0,
-                        igdb_id: game.igdb_id,
-                        slug: game.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-                        cover_url: game.cover_url
-                    }))
+                    games: selectedGamesList
+                        .filter((game, index, self) =>
+                            index === self.findIndex(g => g.igdb_id === game.igdb_id)
+                        )
+                        .map(game => ({
+                            name: game.name,
+                            description: game.description || 'No description available',
+                            year: game.year,
+                            igdb_id: game.igdb_id,
+                            slug: game.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                            cover_url: game.cover_url
+                        }))
                 }
             });
 
@@ -141,7 +143,7 @@ const SteamImport: React.FC = () => {
                         status: "NOT_STARTED",
                         playtime_minutes: selectedGamesList.find(g => g.igdb_id === game.igdb_id)?.playtime_minutes || 0,
                         last_played_at: selectedGamesList.find(g => g.igdb_id === game.igdb_id)?.rtime_last_played ?
-                            new Date(selectedGamesList.find(g => g.igdb_id === game.igdb_id)!.rtime_last_played * 1000).toISOString() :
+                            new Date(selectedGamesList.find(g => g.igdb_id === game.igdb_id)!.rtime_last_played * 1000).toISOString().replace('Z', '+00:00') :
                             null
                     }))
                 },
@@ -174,7 +176,7 @@ const SteamImport: React.FC = () => {
 
         } catch (error) {
             setError(error instanceof Error ? error.message : 'Failed to add games to collection');
-
+            console.log(error.message);
             // Update all statuses to error
             const errorStatus: ImportStatus = {};
             selectedGamesList.forEach(game => {

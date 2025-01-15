@@ -1,4 +1,5 @@
 export const getRankColor = (rank: string): string => {
+
     let rankLower = rank.toLowerCase();
 
     // Common shorthand mappings
@@ -27,23 +28,32 @@ export const getRankColor = (rank: string): string => {
         }
     }
 
-    // Check for Overwatch SR numbers
-    const srMatch = rankLower.match(/\d+/);
-    if (srMatch) {
-        const sr = parseInt(srMatch[0]);
-        if (sr >= 4900) return 'text-yellow-300'; // Top 500
-        if (sr >= 4000) return 'text-orange-500'; // Grandmaster
-        if (sr >= 3500) return 'text-purple-500'; // Master
-        if (sr >= 3000) return 'text-cyan-400';   // Diamond
-        if (sr >= 2500) return 'text-blue-400';   // Platinum
-        if (sr >= 2000) return 'text-yellow-500'; // Gold
-        if (sr >= 1500) return 'text-gray-400';   // Silver
-        if (sr >= 1) return 'text-orange-700';    // Bronze
-    }
+    const isOverwatch = rankLower.includes('sr') ||
+        rankLower.includes('ow') ||
+        rankLower.includes('top 500') ||
+        rankLower.includes('top500') ||
+        rankLower.includes('t500');
 
-    // Check for Overwatch text ranks
-    if (rankLower.includes('top 500') || rankLower.includes('top500') || rankLower.includes('t500')) {
-        return 'text-yellow-300';
+    // Only process SR numbers if it's an Overwatch rank
+    if (isOverwatch) {
+        const srMatch = rankLower.match(/\d+/);
+        if (srMatch) {
+            const sr = parseInt(srMatch[0]);
+            if (sr >= 4900) return 'text-yellow-300';
+            if (sr >= 4000) return 'text-orange-500';
+            if (sr >= 3500) return 'text-purple-500';
+            if (sr >= 3000) return 'text-cyan-400';
+            if (sr >= 2500) return 'text-blue-400';
+            if (sr >= 2000) return 'text-yellow-500';
+            if (sr >= 1500) return 'text-gray-400';
+            if (sr >= 1) return 'text-orange-700';
+        }
+
+        if (rankLower.includes('top 500') ||
+            rankLower.includes('top500') ||
+            rankLower.includes('t500')) {
+            return 'text-yellow-300';
+        }
     }
 
     // Check for letter grades
@@ -88,7 +98,7 @@ export const getRankColor = (rank: string): string => {
     } else if (rankLower.includes('legend') || rankLower.includes('leg')) {
         return 'text-yellow-600';
     }
-    
+
     return 'text-white';
 };
 
