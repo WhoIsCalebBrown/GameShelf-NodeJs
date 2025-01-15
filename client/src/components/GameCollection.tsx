@@ -23,13 +23,7 @@ const GameCollection: React.FC = () => {
     const {loading, error, data, networkStatus} = useQuery(GET_DATA, {
         variables: {
             userId: user?.id,
-            orderBy: sortConfig.field === 'status'
-                ? [{status: sortConfig.order}]
-                : sortConfig.field === 'last_played_at'
-                ? [{last_played_at: sortConfig.order + '_nulls_last'}]
-                : sortConfig.field === 'playtime_minutes'
-                ? [{playtime_minutes: sortConfig.order}]
-                : [{game: {[sortConfig.field]: sortConfig.order}}]
+            orderBy: [{ status: 'asc' }]
         },
         fetchPolicy: 'cache-and-network',
         notifyOnNetworkStatusChange: true,
@@ -43,9 +37,7 @@ const GameCollection: React.FC = () => {
                     query: GET_DATA,
                     variables: {
                         userId: user?.id,
-                        orderBy: sortConfig.field === 'status'
-                            ? [{status: sortConfig.order}]
-                            : [{game: {[sortConfig.field]: sortConfig.order}}]
+                        orderBy: [{ status: 'asc' }]
                     }
                 });
 
@@ -59,9 +51,7 @@ const GameCollection: React.FC = () => {
                         query: GET_DATA,
                         variables: {
                             userId: user?.id,
-                            orderBy: sortConfig.field === 'status'
-                                ? [{status: sortConfig.order}]
-                                : [{game: {[sortConfig.field]: sortConfig.order}}]
+                            orderBy: [{ status: 'asc' }]
                         },
                         data: {game_progress: updatedProgress}
                     });
@@ -81,9 +71,7 @@ const GameCollection: React.FC = () => {
                 query: GET_DATA,
                 variables: {
                     userId: user?.id,
-                    orderBy: sortConfig.field === 'status'
-                        ? [{status: sortConfig.order}]
-                        : [{game: {[sortConfig.field]: sortConfig.order}}]
+                    orderBy: [{ status: 'asc' }]
                 }
             });
             if (existingData && update_game_progress.returning.length > 0) {
@@ -96,9 +84,7 @@ const GameCollection: React.FC = () => {
                     query: GET_DATA,
                     variables: {
                         userId: user?.id,
-                        orderBy: sortConfig.field === 'status'
-                            ? [{status: sortConfig.order}]
-                            : [{game: {[sortConfig.field]: sortConfig.order}}]
+                        orderBy: [{ status: 'asc' }]
                     },
                     data: {game_progress: updatedProgress}
                 });
@@ -193,19 +179,64 @@ const GameCollection: React.FC = () => {
         is_favorite: progress.is_favorite
     }));
 
-    const favoriteGames = games.filter(game => game.is_favorite);
-    const regularGames = games.filter(game => !game.is_favorite);
-
-    // Split games into played and unplayed regardless of sort order if groupUnplayed is true
-    const { playedGames, neverPlayedGames } = groupUnplayed
-        ? {
-            playedGames: regularGames.filter(game => game.last_played_at !== null),
-            neverPlayedGames: regularGames.filter(game => game.last_played_at === null)
-        }
-        : {
-            playedGames: regularGames,
-            neverPlayedGames: []
+    // Memoize the sorted games to prevent unnecessary re-renders
+    const sortedGames = React.useMemo(() => {
+        const sortGames = (gamesArray: Game[]) => {
+            return [...gamesArray].sort((a, b) => {
+                if (sortConfig.field === 'name') {
+                    return sortConfig.order === 'asc' 
+                        ? a.name.localeCompare(b.name)
+                        : b.name.localeCompare(a.name);
+                }
+                if (sortConfig.field === 'status') {
+                    return sortConfig.order === 'asc'
+                        ? a.status.localeCompare(b.status)
+                        : b.status.localeCompare(a.status);
+                }
+                if (sortConfig.field === 'year') {
+                    const yearA = a.year || 0;
+                    const yearB = b.year || 0;
+                    return sortConfig.order === 'asc' ? yearA - yearB : yearB - yearA;
+                }
+                if (sortConfig.field === 'last_played_at') {
+                    const dateA = a.last_played_at ? new Date(a.last_played_at).getTime() : 0;
+                    const dateB = b.last_played_at ? new Date(b.last_played_at).getTime() : 0;
+                    return sortConfig.order === 'asc' ? dateA - dateB : dateB - dateA;
+                }
+                if (sortConfig.field === 'playtime_minutes') {
+                    const timeA = a.playtime_minutes || 0;
+                    const timeB = b.playtime_minutes || 0;
+                    return sortConfig.order === 'asc' ? timeA - timeB : timeB - timeA;
+                }
+                return 0;
+            });
         };
+
+        const favoriteGames = sortGames(games.filter(game => game.is_favorite));
+        const regularGames = sortGames(games.filter(game => !game.is_favorite));
+
+        return { favoriteGames, regularGames };
+    }, [games, sortConfig]);
+
+    // Memoize GameStats to prevent re-renders when sorting changes
+    const memoizedGameStats = React.useMemo(() => (
+        <GameStats games={games} />
+    ), [games]);
+
+    // Split games into played and unplayed
+    const { playedGames, neverPlayedGames } = React.useMemo(() => {
+        if (!groupUnplayed) {
+            return {
+                playedGames: sortedGames.regularGames,
+                neverPlayedGames: []
+            };
+        }
+
+        return {
+            playedGames: sortedGames.regularGames.filter(game => game.last_played_at !== null),
+            neverPlayedGames: sortedGames.regularGames.filter(game => game.last_played_at === null)
+        };
+    }, [sortedGames.regularGames, groupUnplayed]);
 
     const showLoading = loading && networkStatus === NetworkStatus.loading;
 
@@ -266,7 +297,7 @@ const GameCollection: React.FC = () => {
                 />
             )}
 
-            <GameStats games={games}/>
+            {memoizedGameStats}
 
             {showLoading ? (
                 <div className="bg-dark p-8 rounded-lg">
@@ -281,11 +312,11 @@ const GameCollection: React.FC = () => {
             ) : (
                 <>
                     {/* Favorite Games Section */}
-                    {favoriteGames.length > 0 && (
+                    {sortedGames.favoriteGames.length > 0 && (
                         <div className="space-y-4">
                             <h3 className="text-xl font-semibold text-primary-400">Favorite Games</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                {favoriteGames.map((game: Game) => (
+                                {sortedGames.favoriteGames.map((game: Game) => (
                                     <div key={game.id} className="transition-all duration-300 ease-in-out">
                                         <GameCard
                                             game={game}
@@ -300,7 +331,7 @@ const GameCollection: React.FC = () => {
 
                     {/* Regular Games Section */}
                     <div className="space-y-4">
-                        {(favoriteGames.length > 0 || groupUnplayed) && (
+                        {(sortedGames.favoriteGames.length > 0 || groupUnplayed) && (
                             <h3 className="text-xl font-semibold">
                                 {groupUnplayed ? 'Played Games' : 'All Games'}
                             </h3>
