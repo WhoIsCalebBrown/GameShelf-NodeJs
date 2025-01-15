@@ -6,6 +6,7 @@ import GameSearch from './components/GameSearch';
 import GameCollection from './components/GameCollection';
 import Login from './components/Login';
 import Register from './components/Register';
+import SteamCallback from './components/SteamCallback';
 import './animations.css';
 
 interface ProtectedRouteProps {
@@ -13,9 +14,9 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-    const { user, isLoading } = useAuth();
+    const { user, loading } = useAuth();
 
-    if (isLoading) {
+    if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-dark-darker">
                 <div className="text-lg text-gray-400">Loading...</div>
@@ -101,6 +102,7 @@ const App: React.FC = () => {
                             <Route path="/" element={<Home />} />
                             <Route path="/login" element={<Login />} />
                             <Route path="/register" element={<Register />} />
+                            <Route path="/steam-callback" element={<SteamCallback />} />
                             <Route 
                                 path="/search" 
                                 element={

@@ -192,13 +192,16 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions, onStatusChange, onDe
         }
     };
 
-    const statusColors = {
-        NOT_STARTED: 'text-gray-400',
-        IN_PROGRESS: 'text-green-500',
-        COMPLETED: 'text-blue-500',
-        ON_HOLD: 'text-yellow-500',
-        DROPPED: 'text-red-500',
-        WANT_TO_PLAY: 'text-purple-500'
+    const statusColors: Record<game_status, string> = {
+        'not_started': 'text-gray-400',
+        'in_progress': 'text-green-500',
+        'completed': 'text-blue-500',
+        'abandoned': 'text-red-500',
+        'on_hold': 'text-yellow-500',
+        'active_multiplayer': 'text-purple-500',
+        'casual_rotation': 'text-orange-400',
+        'retired': 'text-gray-500',
+        'replaying': 'text-cyan-400'
     };
 
 
@@ -285,12 +288,15 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions, onStatusChange, onDe
                         }`}
                     >
                         <option value="" className="text-gray-400">Set Status</option>
-                        <option value="NOT_STARTED" className="text-gray-400">Not Started</option>
-                        <option value="IN_PROGRESS" className="text-green-500">In Progress</option>
-                        <option value="COMPLETED" className="text-blue-500">Completed</option>
-                        <option value="ON_HOLD" className="text-yellow-500">On Hold</option>
-                        <option value="DROPPED" className="text-red-500">Dropped</option>
-                        <option value="WANT_TO_PLAY" className="text-purple-500">Want to Play</option>
+                        <option value="not_started" className="text-gray-400">Not Started</option>
+                        <option value="in_progress" className="text-green-500">In Progress</option>
+                        <option value="completed" className="text-blue-500">Completed</option>
+                        <option value="abandoned" className="text-red-500">Abandoned</option>
+                        <option value="on_hold" className="text-yellow-500">On Hold</option>
+                        <option value="active_multiplayer" className="text-purple-500">Active Multiplayer</option>
+                        <option value="casual_rotation" className="text-orange-400">Casual Rotation</option>
+                        <option value="retired" className="text-gray-500">Retired</option>
+                        <option value="replaying" className="text-cyan-400">Replaying</option>
                     </select>
 
                     {/* Description */}

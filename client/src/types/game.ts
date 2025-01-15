@@ -1,4 +1,25 @@
-export type game_status = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD' | 'DROPPED' | 'WANT_TO_PLAY';
+export type game_status = 
+    | 'not_started'
+    | 'in_progress'
+    | 'completed'
+    | 'abandoned'
+    | 'on_hold'
+    | 'active_multiplayer'  // For competitive/multiplayer games you regularly play
+    | 'casual_rotation'     // For party/casual games played occasionally
+    | 'retired'            // For previously competitive games no longer actively played
+    | 'replaying';
+
+export const game_status_labels: Record<game_status, string> = {
+    not_started: 'Not Started',
+    in_progress: 'In Progress',
+    completed: 'Completed',
+    abandoned: 'Abandoned',
+    on_hold: 'On Hold',
+    active_multiplayer: 'Active Multiplayer',
+    casual_rotation: 'Casual Rotation',
+    retired: 'Retired',
+    replaying: 'Replaying'
+};
 
 export interface Game {
     id: number;

@@ -2,8 +2,21 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@apollo/client';
 import { GET_DATA } from '../queries/queries';
-import { game_status } from '../types/game';
+import { game_status, game_status_labels } from '../types/game';
 import { useAuth } from '../context/AuthContext';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+
+const CHART_COLORS = {
+    'not_started': '#9CA3AF',  // gray-400
+    'in_progress': '#10B981',  // green-500
+    'completed': '#3B82F6',    // blue-500
+    'abandoned': '#EF4444',    // red-500
+    'on_hold': '#F59E0B',      // yellow-500
+    'active_multiplayer': '#8B5CF6', // purple-500
+    'casual_rotation': '#F97316', // orange-500
+    'retired': '#6B7280',      // gray-500
+    'replaying': '#06B6D4'     // cyan-500
+};
 
 const Home: React.FC = () => {
     const { user } = useAuth();
@@ -18,6 +31,17 @@ const Home: React.FC = () => {
     const getStatusCount = (status: game_status) => {
         if (!data?.game_progress) return 0;
         return data.game_progress.filter((progress: any) => progress.status === status).length;
+    };
+
+
+    const getChartData = () => {
+        const statuses = Object.keys(game_status_labels) as game_status[];
+        return statuses
+            .map(status => ({
+                name: game_status_labels[status],
+                value: getStatusCount(status)
+            }))
+            .filter(item => item.value > 0); // Only show statuses with games
     };
 
     if (!user) {
@@ -99,9 +123,9 @@ const Home: React.FC = () => {
     if (error) return <div>Error: {error.message}</div>;
 
     const totalgames = data?.game_progress?.length || 0;
-    const playinggames = getStatusCount('IN_PROGRESS');
-    const completedgames = getStatusCount('COMPLETED');
-    const notStartedgames = getStatusCount('NOT_STARTED');
+    const activeGames = getStatusCount('active_multiplayer');
+    const inProgressGames = getStatusCount('in_progress');
+    const casualGames = getStatusCount('casual_rotation');
 
     return (
         <div className="space-y-8">
@@ -113,22 +137,55 @@ const Home: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-dark p-6 rounded-lg text-center">
                     <h3 className="text-2xl font-bold text-primary-500">{totalgames}</h3>
-                    <p className="text-gray-400">Total games</p>
+                    <p className="text-gray-400">Total Games</p>
                 </div>
                 <div className="bg-dark p-6 rounded-lg text-center">
-                    <h3 className="text-2xl font-bold text-green-500">{playinggames}</h3>
-                    <p className="text-gray-400">Currently Playing</p>
+                    <h3 className="text-2xl font-bold text-purple-500">{activeGames}</h3>
+                    <p className="text-gray-400">Active Multiplayer</p>
                 </div>
                 <div className="bg-dark p-6 rounded-lg text-center">
-                    <h3 className="text-2xl font-bold text-blue-500">{completedgames}</h3>
-                    <p className="text-gray-400">Completed</p>
+                    <h3 className="text-2xl font-bold text-green-500">{inProgressGames}</h3>
+                    <p className="text-gray-400">In Progress</p>
                 </div>
                 <div className="bg-dark p-6 rounded-lg text-center">
-                    <h3 className="text-2xl font-bold text-yellow-500">{notStartedgames}</h3>
-                    <p className="text-gray-400">Not Started</p>
+                    <h3 className="text-2xl font-bold text-orange-400">{casualGames}</h3>
+                    <p className="text-gray-400">Casual Rotation</p>
                 </div>
             </div>
 
+            <div className="bg-dark p-6 rounded-lg">
+                <h3 className="text-xl font-bold mb-4">Collection Overview</h3>
+                <div className="h-[400px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie
+                                data={getChartData()}
+                                dataKey="value"
+                                nameKey="name"
+                                cx="50%"
+                                cy="50%"
+                                outerRadius={150}
+                                label={({ name, percent }) => 
+                                    `${name} ${(percent * 100).toFixed(0)}%`
+                                }
+                                labelLine={false}
+                            >
+                                {getChartData().map((entry, index) => (
+                                    <Cell 
+                                        key={`cell-${index}`}
+                                        fill={CHART_COLORS[Object.keys(game_status_labels)[index] as game_status]}
+                                    />
+                                ))}
+                            </Pie>
+                            <Tooltip />
+                            <Legend />
+                        </PieChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
+
+            {/* Quick Links */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Link 
                     to="/search" 

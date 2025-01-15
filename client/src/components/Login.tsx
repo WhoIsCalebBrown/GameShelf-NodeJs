@@ -100,6 +100,31 @@ const Login: React.FC = () => {
                         </Link>
                     </div>
                 </form>
+
+                <div className="mt-6">
+                    <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-600"></div>
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                            <span className="px-2 bg-dark text-gray-400">Or continue with</span>
+                        </div>
+                    </div>
+
+                    <div className="mt-6">
+                        <a
+                            href="http://localhost:3001/auth/steam"
+                            className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#171a21] hover:bg-[#2a475e] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#66c0f4]"
+                        >
+                            <img
+                                src="https://steamcdn-a.akamaihd.net/steamcommunity/public/images/steamworks_docs/english/sits_small.png"
+                                alt="Steam"
+                                className="h-5 w-5 mr-2"
+                            />
+                            Sign in with Steam
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     );

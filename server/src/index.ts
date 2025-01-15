@@ -7,7 +7,7 @@ dotenv.config();
 import express from 'express';
 import igdbRoutes from './routes/igdb';
 import authRoutes from './routes/auth';
-import steamRoutes from './routes/steam';
+import steamRoutes from './routes/auth/steam';
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -19,6 +19,9 @@ app.use(express.json());
 app.use('/api/igdb', igdbRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/steam', steamRoutes);
+
+// Steam Authentication routes
+app.use('/auth/steam', steamRoutes);
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);

@@ -1,69 +1,62 @@
 import React from 'react';
-import { GameStatsProps } from '../types/props';
+import { Game } from '../types/game';
 
-const GameStats: React.FC<GameStatsProps> = ({ games }) => {
-    const stats = {
-        NOT_STARTED: games.filter(game => game.status === 'NOT_STARTED').length,
-        IN_PROGRESS: games.filter(game => game.status === 'IN_PROGRESS').length,
-        COMPLETED: games.filter(game => game.status === 'COMPLETED').length,
-        ON_HOLD: games.filter(game => game.status === 'ON_HOLD').length,
-        DROPPED: games.filter(game => game.status === 'DROPPED').length,
-        WANT_TO_PLAY: games.filter(game => game.status === 'WANT_TO_PLAY').length
-    };
+const GameStats: React.FC<{ games: Game[] }> = ({ games }) => {
+    const totalGames = games.length;
+    const notStartedGames = games.filter(game => game.status === 'not_started').length;
+    const inProgressGames = games.filter(game => game.status === 'in_progress').length;
+    const completedGames = games.filter(game => game.status === 'completed').length;
+    const onHoldGames = games.filter(game => game.status === 'on_hold').length;
+    const abandonedGames = games.filter(game => game.status === 'abandoned').length;
+    const activeMultiplayerGames = games.filter(game => game.status === 'active_multiplayer').length;
+    const casualRotationGames = games.filter(game => game.status === 'casual_rotation').length;
+    const retiredGames = games.filter(game => game.status === 'retired').length;
+    const replayingGames = games.filter(game => game.status === 'replaying').length;
 
-    const maxCount = Math.max(...Object.values(stats), 1);
-    const getHeight = (count: number) => `${(count / maxCount) * 200}px`;
+    const totalPlaytime = games.reduce((total, game) => total + (game.playtime_minutes || 0), 0);
+    const playtimeHours = Math.floor(totalPlaytime / 60);
+    const playtimeMinutes = totalPlaytime % 60;
+
+    const gamesWithCompletion = games.filter(game => game.completion_percentage !== null && game.completion_percentage !== undefined);
+    const averageCompletion = gamesWithCompletion.length > 0
+        ? Math.round(gamesWithCompletion.reduce((sum, game) => sum + (game.completion_percentage || 0), 0) / gamesWithCompletion.length)
+        : 0;
 
     return (
-        <div className="bg-dark p-6 rounded-lg mb-6">
-            <h3 className="text-xl font-bold mb-4">Collection Stats</h3>
-            
-            <div className="grid grid-cols-6 gap-4 h-[250px] mb-8">
-                {Object.entries(stats).map(([status, count]) => (
-                    <div key={status} className="flex flex-col items-center justify-end">
-                        <div className="text-sm mb-2">{count}</div>
-                        <div 
-                            style={{ height: getHeight(count) }}
-                            className={`w-12 rounded-t-lg transition-all duration-500 ${
-                                status === 'NOT_STARTED' ? 'bg-gray-500' :
-                                status === 'IN_PROGRESS' ? 'bg-green-500' :
-                                status === 'COMPLETED' ? 'bg-blue-500' :
-                                status === 'ON_HOLD' ? 'bg-yellow-500' :
-                                status === 'DROPPED' ? 'bg-red-500' :
-                                'bg-purple-500'
-                            }`}
-                        />
-                        <div className="text-xs mt-2 text-center text-gray-400">
-                            {status.split('_').join(' ')}
-                        </div>
-                    </div>
-                ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-dark p-4 rounded-lg">
+                <h3 className="text-lg font-semibold mb-2">Collection Stats</h3>
+                <div className="space-y-1">
+                    <p className="text-sm text-gray-400">Total Games: <span className="text-white">{totalGames}</span></p>
+                    <p className="text-sm text-gray-400">Total Playtime: <span className="text-white">{playtimeHours}h {playtimeMinutes}m</span></p>
+                    <p className="text-sm text-gray-400">Average Completion: <span className="text-white">{averageCompletion}%</span></p>
+                </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 pt-4 border-t border-gray-700">
-                <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-gray-500 rounded-full" />
-                    <span className="text-sm">Not Started ({stats.NOT_STARTED})</span>
+            <div className="bg-dark p-4 rounded-lg">
+                <h3 className="text-lg font-semibold mb-2">Progress Stats</h3>
+                <div className="space-y-1">
+                    <p className="text-sm text-gray-400">Not Started: <span className="text-white">{notStartedGames}</span></p>
+                    <p className="text-sm text-gray-400">In Progress: <span className="text-white">{inProgressGames}</span></p>
+                    <p className="text-sm text-gray-400">Completed: <span className="text-white">{completedGames}</span></p>
+                    <p className="text-sm text-gray-400">On Hold: <span className="text-white">{onHoldGames}</span></p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full" />
-                    <span className="text-sm">In Progress ({stats.IN_PROGRESS})</span>
+            </div>
+
+            <div className="bg-dark p-4 rounded-lg">
+                <h3 className="text-lg font-semibold mb-2">Active Games</h3>
+                <div className="space-y-1">
+                    <p className="text-sm text-gray-400">Active Multiplayer: <span className="text-white">{activeMultiplayerGames}</span></p>
+                    <p className="text-sm text-gray-400">Casual Rotation: <span className="text-white">{casualRotationGames}</span></p>
+                    <p className="text-sm text-gray-400">Replaying: <span className="text-white">{replayingGames}</span></p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full" />
-                    <span className="text-sm">Completed ({stats.COMPLETED})</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-yellow-500 rounded-full" />
-                    <span className="text-sm">On Hold ({stats.ON_HOLD})</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full" />
-                    <span className="text-sm">Dropped ({stats.DROPPED})</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-purple-500 rounded-full" />
-                    <span className="text-sm">Want to Play ({stats.WANT_TO_PLAY})</span>
+            </div>
+
+            <div className="bg-dark p-4 rounded-lg">
+                <h3 className="text-lg font-semibold mb-2">Other Stats</h3>
+                <div className="space-y-1">
+                    <p className="text-sm text-gray-400">Abandoned: <span className="text-white">{abandonedGames}</span></p>
+                    <p className="text-sm text-gray-400">Retired: <span className="text-white">{retiredGames}</span></p>
                 </div>
             </div>
         </div>
