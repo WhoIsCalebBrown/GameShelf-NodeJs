@@ -145,6 +145,7 @@ router.get(
                     userId: user.id,
                     username: user.username,
                     email: user.email,
+                    steam_id: steamId,
                     created_at: user.created_at,
                     updated_at: user.updated_at,
                     'https://hasura.io/jwt/claims': {

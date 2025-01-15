@@ -149,6 +149,16 @@ const GameCollection: React.FC = () => {
         }
     };
 
+    const handleSteamImport = () => {
+        if (user?.steam_id) {
+            // If user has steam_id, directly start import
+            setShowSteamImport(true);
+        } else {
+            // Otherwise, show the input form
+            setShowSteamImport(!showSteamImport);
+        }
+    };
+
     const SortButton: React.FC<SortButtonProps> = ({field, label}) => (
         <button
             onClick={() => handleSort(field)}
@@ -216,7 +226,7 @@ const GameCollection: React.FC = () => {
                     <h2 className="text-2xl font-bold">My Game Collection</h2>
                     <div className="flex items-center gap-3">
                         <button
-                            onClick={() => setShowSteamImport(!showSteamImport)}
+                            onClick={handleSteamImport}
                             className={`
                                 px-4 py-2 rounded-lg font-medium
                                 ${showSteamImport
@@ -249,7 +259,12 @@ const GameCollection: React.FC = () => {
                 </div>
             </div>
 
-            {showSteamImport && <SteamImport/>}
+            {showSteamImport && (
+                <SteamImport 
+                    autoImport={!!user?.steam_id} 
+                    defaultSteamId={user?.steam_id || ''} 
+                />
+            )}
 
             <GameStats games={games}/>
 

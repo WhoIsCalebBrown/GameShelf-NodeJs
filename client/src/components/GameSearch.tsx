@@ -147,7 +147,7 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [isTrendingLoading, setIsTrendingLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    
+
     // Advanced filter states
     const [showFilters, setShowFilters] = useState(false);
     const [yearRange, setYearRange] = useState({ min: 1970, max: new Date().getFullYear() });
@@ -290,26 +290,26 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
     return (
         <div className="space-y-8">
             {/* Search Section */}
-            <div className="bg-dark rounded-lg p-6 shadow-lg">
+        <div className="bg-dark rounded-lg p-6 shadow-lg">
                 <div className="space-y-4">
                     {/* Search input and button */}
                     <div className="flex gap-4">
                         <div className="flex-1 flex gap-4">
-                            <input
-                                type="text"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                                placeholder="Search for games..."
+                <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                    placeholder="Search for games..."
                                 className="form-input flex-1 bg-dark-light border-gray-700 focus:border-primary-500 focus:ring-primary-500"
-                            />
-                            <button 
-                                onClick={handleSearch}
-                                disabled={isLoading}
+                />
+                <button 
+                    onClick={handleSearch}
+                    disabled={isLoading}
                                 className="btn bg-primary-500 hover:bg-primary-600 transition-colors disabled:opacity-50 min-w-[100px]"
-                            >
-                                {isLoading ? 'Searching...' : 'Search'}
-                            </button>
+                >
+                    {isLoading ? 'Searching...' : 'Search'}
+                </button>
                         </div>
                         <button
                             onClick={() => setShowFilters(!showFilters)}
@@ -385,7 +385,7 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
                                         className="form-input w-24 bg-dark border-gray-700"
                                     />
                                 </div>
-                            </div>
+            </div>
 
                             {/* Genre Filter */}
                             {searchResults.length > 0 && (
@@ -412,8 +412,8 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
                                             </button>
                                         ))}
                                     </div>
-                                </div>
-                            )}
+                </div>
+            )}
 
                             {/* Platform Filter */}
                             {searchResults.length > 0 && (
@@ -444,7 +444,7 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
                             )}
 
                             {/* Reset Filters Button */}
-                            <button
+                            <button 
                                 onClick={() => {
                                     setYearRange({ min: 1970, max: new Date().getFullYear() });
                                     setRatingRange({ min: 0, max: 100 });

@@ -20,7 +20,8 @@ interface SteamGame {
     playtime_windows_forever?: number;
     playtime_mac_forever?: number;
     playtime_linux_forever?: number;
-    last_played?: number;
+    rtime_last_played?: number;
+    last_played_at?: string;
 }
 
 // Helper function to clean game names for better matching
@@ -109,6 +110,20 @@ router.get('/library/:steamId', async (req, res) => {
 
                 // Return true only if it's not a DLC and not a non-game
                 return !isDLC && !isNonGame(game.name);
+            }).map((game: SteamGame) => {
+                // Log timestamp conversion
+                console.log(`Processing game: ${game.name}`);
+                console.log(`Original rtime_last_played: ${game.rtime_last_played}`);
+                const lastPlayedAt = game.rtime_last_played ? new Date(game.rtime_last_played * 1000).toISOString() : null;
+                console.log(`Converted last_played_at: ${lastPlayedAt}`);
+                
+                return {
+                    ...game,
+                    // Steam provides playtime in minutes
+                    playtime_minutes: game.playtime_forever || 0,
+                    // Convert rtime_last_played Unix timestamp to ISO string
+                    last_played_at: lastPlayedAt
+                };
             });
         }
 
@@ -161,172 +176,110 @@ async function searchIGDB(query: string, retries = 2): Promise<any> {
     }
 }
 
-// Process a batch of games
-async function processBatch(games: SteamGame[], startIdx: number, onProgress?: (current: number) => void): Promise<any[]> {
-    const results: any[] = [];
-    const batchPromises = games.map(async (game, index) => {
-        try {
-            // Check cache first
-            const cleanedName = cleanGameName(game.name);
-            if (matchCache[cleanedName]) {
-                onProgress?.(startIdx + index + 1);
-                return {
-                    index: startIdx + games.indexOf(game),
-                    result: {
-                        ...game,
-                        ...matchCache[cleanedName]
-                    }
-                };
-            }
-
-            // Try exact match first
-            const matches = await searchIGDB(`search "${cleanedName}"; limit 5;`);
-            let bestMatch = null;
-
-            if (matches && matches.length > 0) {
-                // Try to find an exact match first
-                bestMatch = matches.find((match: any) => 
-                    cleanGameName(match.name) === cleanedName
-                );
-
-                // If no exact match, try partial match
-                if (!bestMatch) {
-                    bestMatch = matches.find((match: any) => {
-                        const matchName = cleanGameName(match.name);
-                        return matchName.includes(cleanedName) || cleanedName.includes(matchName);
-                    });
-                }
-
-                // If still no match, take the first result
-                if (!bestMatch) {
-                    bestMatch = matches[0];
-                }
-            }
-
-            let result;
-            if (bestMatch) {
-                result = {
-                    ...game,
-                    igdb_id: bestMatch.id,
-                    cover_url: bestMatch.cover?.url?.replace('t_thumb', 't_cover_big'),
-                    year: bestMatch.first_release_date ? new Date(bestMatch.first_release_date * 1000).getFullYear() : null,
-                    description: bestMatch.summary,
-                    slug: bestMatch.slug,
-                    playtime_minutes: game.playtime_forever || 0,
-                    last_played: game.last_played ? new Date(game.last_played * 1000).toISOString() : null
-                };
-                // Cache the match
-                matchCache[cleanedName] = {
-                    igdb_id: bestMatch.id,
-                    cover_url: bestMatch.cover?.url?.replace('t_thumb', 't_cover_big'),
-                    year: bestMatch.first_release_date ? new Date(bestMatch.first_release_date * 1000).getFullYear() : null,
-                    description: bestMatch.summary,
-                    slug: bestMatch.slug,
-                    playtime_minutes: game.playtime_forever || 0,
-                    last_played: game.last_played ? new Date(game.last_played * 1000).toISOString() : null
-                };
-            } else {
-                result = {
-                    ...game,
-                    igdb_id: 0,
-                    cover_url: '',
-                    year: null,
-                    description: `No description available for ${game.name}`,
-                    slug: game.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-                    playtime_minutes: game.playtime_forever || 0,
-                    last_played: game.last_played ? new Date(game.last_played * 1000).toISOString() : null
-                };
-            }
-
-            onProgress?.(startIdx + index + 1);
-            return {
-                index: startIdx + games.indexOf(game),
-                result
-            };
-        } catch (error) {
-            console.error(`Error matching game ${game.name}:`, error);
-            onProgress?.(startIdx + index + 1);
-            return {
-                index: startIdx + games.indexOf(game),
-                result: {
-                    ...game,
-                    igdb_id: 0,
-                    cover_url: '',
-                    year: null,
-                    description: `No description available for ${game.name}`,
-                    slug: game.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-                    playtime_minutes: game.playtime_forever || 0,
-                    last_played: game.last_played ? new Date(game.last_played * 1000).toISOString() : null
-                }
-            };
-        }
-    });
-
-    const batchResults = await Promise.all(batchPromises);
-    return batchResults;
-}
-
-// Match Steam games with IGDB database
+// Match Steam games with IGDB data
 router.post('/match', async (req, res) => {
     try {
         const { games } = req.body;
-        const BATCH_SIZE = 5; // Process 5 games at a time
-        const results: any[] = new Array(games.length);
-        const unmatchedGames: string[] = [];
+        if (!Array.isArray(games)) {
+            throw new Error('Invalid request: games must be an array');
+        }
 
-        // Set up SSE headers
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
+        const results = [];
+        const batchSize = 5; // Process 5 games at a time to respect rate limits
 
-        // Process games in batches
-        for (let i = 0; i < games.length; i += BATCH_SIZE) {
-            const batch = games.slice(i, i + BATCH_SIZE);
-            const batchResults = await processBatch(batch, i, (current) => {
-                // Send progress event
-                const progressData = JSON.stringify({ current, total: games.length });
-                res.write(`data: ${progressData}\n\n`);
-            });
-            
-            // Place results in the correct order
-            batchResults.forEach(({ index, result }) => {
-                results[index] = result;
-                if (result.igdb_id === 0) {
-                    unmatchedGames.push(result.name);
+        for (let i = 0; i < games.length; i += batchSize) {
+            const batch = games.slice(i, i + batchSize);
+            const batchResults = await Promise.all(batch.map(async (game) => {
+                try {
+                    const cleanedName = cleanGameName(game.name);
+                    
+                    // Check cache first
+                    if (matchCache[cleanedName]) {
+                        return {
+                            ...game,
+                            ...matchCache[cleanedName]
+                        };
+                    }
+
+                    // Search IGDB
+                    const matches = await searchIGDB(`search "${cleanedName}"; limit 5;`);
+                    let bestMatch = null;
+
+                    if (matches && matches.length > 0) {
+                        // Try to find an exact match first
+                        bestMatch = matches.find((match: any) => 
+                            cleanGameName(match.name) === cleanedName
+                        );
+
+                        // If no exact match, try partial match
+                        if (!bestMatch) {
+                            bestMatch = matches.find((match: any) => {
+                                const matchName = cleanGameName(match.name);
+                                return matchName.includes(cleanedName) || cleanedName.includes(matchName);
+                            });
+                        }
+
+                        // If still no match, take the first result
+                        if (!bestMatch) {
+                            bestMatch = matches[0];
+                        }
+                    }
+
+                    const result = {
+                        ...game,
+                        igdb_id: bestMatch?.id || 0,
+                        cover_url: bestMatch?.cover?.url?.replace('t_thumb', 't_cover_big') || '',
+                        year: bestMatch?.first_release_date ? new Date(bestMatch.first_release_date * 1000).getFullYear() : null,
+                        description: bestMatch?.summary || `No description available for ${game.name}`,
+                        slug: bestMatch?.slug || game.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                        playtime_minutes: game.playtime_forever || 0,
+                        last_played_at: game.rtime_last_played ? new Date(game.rtime_last_played * 1000).toISOString() : null
+                    };
+
+                    console.log(`Match endpoint - Game: ${game.name}`);
+                    console.log(`Original rtime_last_played: ${game.rtime_last_played}`);
+                    console.log(`Converted last_played_at: ${result.last_played_at}`);
+
+                    // Cache the match
+                    if (bestMatch) {
+                        matchCache[cleanedName] = {
+                            igdb_id: bestMatch.id,
+                            cover_url: bestMatch.cover?.url?.replace('t_thumb', 't_cover_big'),
+                            year: bestMatch.first_release_date ? new Date(bestMatch.first_release_date * 1000).getFullYear() : null,
+                            description: bestMatch.summary,
+                            slug: bestMatch.slug
+                        };
+                    }
+
+                    return result;
+                } catch (error) {
+                    console.error(`Error matching game ${game.name}:`, error);
+                    return {
+                        ...game,
+                        igdb_id: 0,
+                        cover_url: '',
+                        year: null,
+                        description: `No description available for ${game.name}`,
+                        slug: game.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                        playtime_minutes: game.playtime_forever || 0,
+                        last_played_at: game.rtime_last_played ? new Date(game.rtime_last_played * 1000).toISOString() : null
+                    };
                 }
-            });
+            }));
 
-            // Add a small delay between batches
-            if (i + BATCH_SIZE < games.length) {
-                await delay(1000);
+            results.push(...batchResults);
+            if (i + batchSize < games.length) {
+                await delay(1000); // Wait 1 second between batches
             }
         }
 
-        // Log summary of unmatched games
-        if (unmatchedGames.length > 0) {
-            console.log('\n📊 Matching Summary:');
-            console.log(`✅ Matched: ${games.length - unmatchedGames.length} games`);
-            console.log(`❌ Unmatched: ${unmatchedGames.length} games`);
-            console.log('\n❌ Unmatched Games List:');
-            unmatchedGames.forEach(name => console.log(`  - ${name}`));
-            console.log('\n');
-        }
-
-        // Send final results event
-        const finalData = JSON.stringify({ matches: results });
-        res.write(`data: ${finalData}\n\n`);
-        
-        // End the response
-        res.end();
+        res.json(results);
     } catch (error) {
-        console.error('Game matching error:', error);
-        // Only send error if headers haven't been sent
-        if (!res.headersSent) {
-            res.status(500).json({ 
-                error: 'Failed to match games with IGDB',
-                details: error instanceof Error ? error.message : 'Unknown error'
-            });
-        }
+        console.error('Error matching games:', error);
+        res.status(500).json({ 
+            error: 'Failed to match games with IGDB',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
     }
 });
 

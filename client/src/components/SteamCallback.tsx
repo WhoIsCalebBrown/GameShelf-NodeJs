@@ -27,36 +27,30 @@ const SteamCallback: React.FC = () => {
         }
 
         try {
-            // Log the raw token
-            console.log('Raw token:', token);
 
             const tokenParts = token.split('.');
-            console.log('Token parts:', tokenParts);
 
             const tokenData = JSON.parse(atob(tokenParts[1]));
-            console.log('Decoded token data:', tokenData);
 
             // Include Hasura claims in the user object
             const user = {
                 id: parseInt(tokenData.userId),
                 username: tokenData.username,
-                email: tokenData.email || `steam_${steamId}@gameshelf.local`,
-                created_at: tokenData.created_at || new Date().toISOString(),
-                updated_at: tokenData.updated_at || new Date().toISOString(),
+                email: tokenData.email,
+                steam_id: tokenData.steam_id,
+                created_at: tokenData.created_at,
+                updated_at: tokenData.updated_at,
                 // Add Hasura claims
                 'https://hasura.io/jwt/claims': tokenData['https://hasura.io/jwt/claims']
             };
-
-            console.log('Created user object:', user);
+       
 
             if (user.username && !user.username.startsWith('steam_')) {
-                console.log('Logging in user directly:', user);
                 login(token, user);
                 navigate('/collection');
                 return;
             }
-
-            console.log('Setting up username for:', user);
+          
             setInitialUser(user);
             setAuthToken(token);
         } catch (error) {

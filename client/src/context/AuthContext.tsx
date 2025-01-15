@@ -19,23 +19,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         const savedToken = localStorage.getItem('token');
         const savedUser = localStorage.getItem('user');
-
+        
         if (savedToken && savedUser) {
             try {
-                // Verify token is still valid
-                const tokenData = JSON.parse(atob(savedToken.split('.')[1]));
-                const expirationTime = tokenData.exp * 1000; // Convert to milliseconds
-                
-                if (expirationTime > Date.now()) {
-                    setToken(savedToken);
-                    setUser(JSON.parse(savedUser));
-                } else {
-                    // Token expired, clear storage
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
-                }
+                const userData = JSON.parse(savedUser);
+                setToken(savedToken);
+                setUser(userData);
             } catch (error) {
-                console.error('Error parsing saved auth data:', error);
+                console.error('Error parsing saved user data:', error);
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
             }
@@ -50,21 +41,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
     }, []);
 
-    const login = useCallback((newToken: string, newUser: User) => {
+    const login = useCallback(async (token: string, userData: User) => {
         try {
-            if (!newToken || !newUser || !newUser.id) {
-                throw new Error('Invalid login data');
-            }
-
-            localStorage.setItem('token', newToken);
-            localStorage.setItem('user', JSON.stringify(newUser));
-            setToken(newToken);
-            setUser(newUser);
+            localStorage.setItem('token', token);
+            localStorage.setItem('user', JSON.stringify(userData));
+            setToken(token);
+            setUser(userData);
         } catch (error) {
-            console.error('Error during login:', error);
-            logout();
+            console.error('Error in login:', error);
         }
-    }, [logout]);
+    }, []);
 
     return (
         <AuthContext.Provider value={{ user, token, loading, login, logout }}>

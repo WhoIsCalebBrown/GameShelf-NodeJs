@@ -4,8 +4,14 @@ export interface User {
     id: number;
     username: string;
     email: string;
+    steam_id?: string;
     created_at: string;
     updated_at: string;
+    'https://hasura.io/jwt/claims': {
+        'x-hasura-allowed-roles': string[];
+        'x-hasura-default-role': string;
+        'x-hasura-user-id': string;
+    };
 }
 
 export interface GameProgress {
@@ -50,4 +56,12 @@ export interface ImportProgress {
     current: number;
     total: number;
     message: string;
+}
+
+export interface AuthContextType {
+    user: User | null;
+    token: string | null;
+    loading: boolean;
+    login: (token: string, user: User) => void;
+    logout: () => void;
 }

@@ -1,466 +1,309 @@
-import React, {useState} from 'react';
-import {useMutation} from '@apollo/client';
-import {BULK_ADD_GAMES, BULK_ADD_GAME_PROGRESS} from '../queries/queries.ts';
+import React, {useState, useEffect, useCallback} from 'react';
 import {useAuth} from '../context/AuthContext';
-import {importSteamLibrary, exportToSteamFormat} from '../services/steam';
-import {Game} from '../types/game';
+import {importSteamLibrary} from '../services/steam';
+import {useMutation} from '@apollo/client';
+import {BULK_ADD_GAMES, BULK_ADD_GAME_PROGRESS, GET_DATA} from '../queries/queries';
 
-interface ImportStatus {
-    [key: number]: {
-        status: 'pending' | 'importing' | 'success' | 'error';
-        error?: string;
-    };
+interface SteamImportProps {
+    autoImport?: boolean;
+    defaultSteamId?: string;
 }
 
-interface ImportProgress {
-    stage: 'fetching' | 'matching' | 'importing' | 'complete';
-    current: number;
-    total: number;
-    message: string;
+interface SteamGame {
+    name: string;
+    igdb_id: number;
+    year?: number;
+    description?: string;
+    cover_url?: string;
+    slug: string;
+    playtime_minutes?: number;
+    last_played_at?: string;
+    matched?: boolean;
 }
 
-const SteamImport: React.FC = () => {
+const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSteamId = ''}) => {
     const {user} = useAuth();
-    const [steamId, setSteamId] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [steamId, setSteamId] = useState(defaultSteamId);
     const [error, setError] = useState<string | null>(null);
-    const [importedGames, setImportedGames] = useState<Game[]>([]);
+    const [importProgress, setImportProgress] = useState({current: 0, total: 100});
+    const [isImporting, setIsImporting] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [availableGames, setAvailableGames] = useState<SteamGame[]>([]);
     const [selectedGames, setSelectedGames] = useState<Set<number>>(new Set());
-    const [searchTerm, setSearchTerm] = useState('');
-    const [showUnmatched, setShowUnmatched] = useState(false);
-    const [importStatus, setImportStatus] = useState<ImportStatus>({});
-    const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
-    const [bulkAddGames] = useMutation(BULK_ADD_GAMES);
-    const [bulkAddGameProgress] = useMutation(BULK_ADD_GAME_PROGRESS);
 
-    const handleImport = async () => {
-        if (!steamId.trim()) {
-            setError('Please enter a Steam ID');
+    const [bulkAddGames] = useMutation(BULK_ADD_GAMES);
+    const [bulkAddGameProgress] = useMutation(BULK_ADD_GAME_PROGRESS, {
+        refetchQueries: [
+            {
+                query: GET_DATA,
+                variables: {
+                    userId: user?.id,
+                    orderBy: [
+                        { status: 'asc' },
+                        { game: { name: 'asc' } },
+                        { last_played_at: 'asc_nulls_last' },
+                        { playtime_minutes: 'asc' }
+                    ]
+                }
+            }
+        ],
+        awaitRefetchQueries: true
+    });
+
+    const handleFetchGames = useCallback(async () => {
+        if (!user?.id) {
+            setError('Please log in to import games');
             return;
         }
 
-        setIsLoading(true);
+        if (!steamId) {
+            setError('Please enter your Steam ID');
+            return;
+        }
+
         setError(null);
-        setImportProgress({
-            stage: 'fetching',
-            current: 0,
-            total: 100,
-            message: 'Fetching Steam library...'
-        });
+        setIsLoading(true);
 
         try {
-            const games = await importSteamLibrary(steamId, (progress) => {
-                if (progress.stage === 'matching') {
-                    setImportProgress({
-                        stage: 'matching',
-                        current: progress.current,
-                        total: progress.total,
-                        message: `Matching games with IGDB (${progress.current}/${progress.total})...`
-                    });
-                }
+            const games = await importSteamLibrary(steamId, (current, total) => {
+                setImportProgress({current, total});
             });
-
-            setImportProgress({
-                stage: 'complete',
-                current: 100,
-                total: 100,
-                message: 'Import complete!'
-            });
-
-            setImportedGames(games);
-            // Only auto-select matched games
-            setSelectedGames(new Set(games.filter(game => game.igdb_id !== 0).map(game => game.id)));
-
-            // Clear progress after a short delay
-            setTimeout(() => {
-                setImportProgress(null);
-            }, 2000);
+            setAvailableGames(games);
         } catch (error) {
-            setError(error instanceof Error ? error.message : 'Failed to import Steam library');
-            setImportProgress(null);
+            console.error('Error fetching Steam library:', error);
+            setError('Failed to fetch Steam library. Please try again.');
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [user, steamId]);
 
-    const handleBulkImport = async () => {
-        if (!user) return;
+    const handleImportSelected = async () => {
+        if (selectedGames.size === 0) {
+            setError('Please select at least one game to import');
+            return;
+        }
 
-        setIsLoading(true);
         setError(null);
-
-        const selectedGamesList = importedGames.filter(game => selectedGames.has(game.id));
-
-        // Initialize status
-        const initialStatus: ImportStatus = {};
-        selectedGamesList.forEach(game => {
-            initialStatus[game.id] = {status: 'pending'};
-        });
-        setImportStatus(initialStatus);
-
-        // Set up progress
-        setImportProgress({
-            stage: 'importing',
-            current: 0,
-            total: selectedGamesList.length,
-            message: `Adding games to collection (0/${selectedGamesList.length})...`
-        });
-
+        setIsImporting(true);
+        setImportProgress({current: 0, total: selectedGames.size});
 
         try {
+            // Filter selected games
+            const gamesToImport = availableGames.filter(game => selectedGames.has(game.igdb_id));
+            
+            // Filter out duplicates by IGDB ID
+            const uniqueGames = Array.from(
+                new Map(gamesToImport.map(game => [game.igdb_id, game])).values()
+            );
+            
+            // Prepare games data for bulk insert
+            const gamesData = uniqueGames.map(game => ({
+                name: game.name,
+                igdb_id: game.igdb_id,
+                year: game.year || null,
+                description: game.description || 'No description available.',
+                cover_url: game.cover_url || null,
+                slug: game.slug
+            }));
+
             // Bulk insert games
-            const { data: gameData } = await bulkAddGames({
+            const {data: gamesResult} = await bulkAddGames({
                 variables: {
-                    games: selectedGamesList
-                        .filter((game, index, self) =>
-                            index === self.findIndex(g => g.igdb_id === game.igdb_id)
-                        )
-                        .map(game => ({
-                            name: game.name,
-                            description: game.description || 'No description available',
-                            year: game.year,
-                            igdb_id: game.igdb_id,
-                            slug: game.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-                            cover_url: game.cover_url
-                        }))
+                    games: gamesData
                 }
             });
 
-            // Update progress halfway
-            setImportProgress({
-                stage: 'importing',
-                current: Math.floor(selectedGamesList.length / 2),
-                total: selectedGamesList.length,
-                message: `Adding game progress...`
-            });
+            if (gamesResult?.insert_games?.returning) {
+                // Map IGDB IDs to inserted game IDs
+                const gameIdMap = new Map(
+                    gamesResult.insert_games.returning.map(g => [g.igdb_id, g.id])
+                );
 
-            // Bulk insert progress records
-            await bulkAddGameProgress({
-                variables: {
-                    progresses: gameData.insert_games.returning.map(game => ({
-                        user_id: user.id,
-                        game_id: game.id,
-                        status: "NOT_STARTED",
-                        playtime_minutes: selectedGamesList.find(g => g.igdb_id === game.igdb_id)?.playtime_minutes || 0,
-                        last_played_at: selectedGamesList.find(g => g.igdb_id === game.igdb_id)?.rtime_last_played ?
-                            new Date(selectedGamesList.find(g => g.igdb_id === game.igdb_id)!.rtime_last_played * 1000).toISOString().replace('Z', '+00:00') :
-                            null
-                    }))
-                },
-                refetchQueries: ['GetUserGames']
-            });
+                // Create a map to store the latest entry for each game
+                const uniqueProgressMap = new Map();
+                gamesToImport.forEach(game => {
+                    const gameId = gameIdMap.get(game.igdb_id);
+                    if (gameId) {
+                        // Convert playtime to minutes, ensuring it's a valid number
+                        const playtimeMinutes = Math.max(0, 
+                            typeof game.playtime_minutes === 'number' ? game.playtime_minutes :
+                            typeof game.playtime_minutes === 'string' ? parseInt(game.playtime_minutes, 10) : 0
+                        );
 
-            // Update all statuses to success
-            const successStatus: ImportStatus = {};
-            selectedGamesList.forEach(game => {
-                successStatus[game.id] = {status: 'success'};
-            });
-            setImportStatus(successStatus);
+                        // If we already have an entry for this game, update it only if the new entry has more playtime
+                        const existingEntry = uniqueProgressMap.get(gameId);
+                        const existingPlaytime = existingEntry?.playtime_minutes || 0;
 
-            // Show completion
-            setImportProgress({
-                stage: 'complete',
-                current: selectedGamesList.length,
-                total: selectedGamesList.length,
-                message: 'Import complete!'
-            });
+                        console.log(`Client - Processing game: ${game.name}`);
+                        console.log(`Last played at: ${game.last_played_at}`);
 
+                        if (!existingEntry || playtimeMinutes > existingPlaytime) {
+                            uniqueProgressMap.set(gameId, {
+                                user_id: user.id,
+                                game_id: gameId,
+                                status: 'not_started',
+                                playtime_minutes: playtimeMinutes,
+                                last_played_at: game.last_played_at || null,
+                                completion_percentage: 0
+                            });
+                        }
+                    }
+                });
 
-            // Clear everything after delay
-            setTimeout(() => {
-                setImportedGames([]);
-                setSelectedGames(new Set());
-                setImportStatus({});
-                setImportProgress(null);
-            }, 2000);
+                // Convert map values to array for the mutation
+                const progressData = Array.from(uniqueProgressMap.values());
 
+                // Bulk insert progress
+                await bulkAddGameProgress({
+                    variables: {
+                        progresses: progressData
+                    }
+                });
+
+                setImportProgress({current: selectedGames.size, total: selectedGames.size});
+            }
         } catch (error) {
-            setError(error instanceof Error ? error.message : 'Failed to add games to collection');
-            console.log(error.message);
-            // Update all statuses to error
-            const errorStatus: ImportStatus = {};
-            selectedGamesList.forEach(game => {
-                errorStatus[game.id] = {
-                    status: 'error',
-                    error: 'Bulk import failed'
-                };
-            });
-            setImportStatus(errorStatus);
-            setImportProgress(null);
+            console.error('Error importing selected games:', error);
+            setError('Failed to import selected games. Please try again.');
         } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleExport = () => {
-        if (!importedGames.length) return;
-
-        const jsonStr = exportToSteamFormat(importedGames);
-        const blob = new Blob([jsonStr], {type: 'application/json'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'gameshelf-export.json';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    };
-
-    const handleSelectAll = (selected: boolean) => {
-        if (selected) {
-            setSelectedGames(new Set(filteredGames.map(game => game.id)));
-        } else {
+            setIsImporting(false);
             setSelectedGames(new Set());
+            setAvailableGames([]);
         }
     };
 
-    const filteredGames = importedGames.filter(game => {
-        const nameMatches = game.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchStatusOk = showUnmatched ? game.igdb_id === 0 : true;
-        return nameMatches && matchStatusOk;
-    });
+    const toggleGameSelection = (igdbId: number) => {
+        setSelectedGames(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(igdbId)) {
+                newSet.delete(igdbId);
+            } else {
+                newSet.add(igdbId);
+            }
+            return newSet;
+        });
+    };
 
-    const matchedGames = importedGames.filter(game => game.igdb_id !== 0);
-    const unmatchedGames = importedGames.filter(game => game.igdb_id === 0);
-    const allSelected = filteredGames.length > 0 &&
-        filteredGames.every(game => selectedGames.has(game.id));
+    const toggleAllGames = () => {
+        if (selectedGames.size === availableGames.length) {
+            setSelectedGames(new Set());
+        } else {
+            setSelectedGames(new Set(availableGames.map(game => game.igdb_id)));
+        }
+    };
+
+    useEffect(() => {
+        if (autoImport && defaultSteamId && !isImporting) {
+            handleFetchGames();
+        }
+    }, [autoImport, defaultSteamId, handleFetchGames, isImporting]);
 
     return (
-        <div className="bg-dark p-6 rounded-lg">
-            <h2 className="text-2xl font-bold mb-6">Steam Import/Export</h2>
-
-            <div className="space-y-4">
-                {error && (
-                    <div className="bg-red-500/10 text-red-500 p-3 rounded-md">
-                        {error}
-                    </div>
-                )}
-
-                <div className="flex gap-4">
+        <div className="bg-dark p-6 rounded-lg mb-6">
+            <h3 className="text-xl font-semibold mb-4">Import Games from Steam</h3>
+            {!autoImport && (
+                <div className="flex gap-4 mb-4">
                     <input
                         type="text"
                         value={steamId}
                         onChange={(e) => setSteamId(e.target.value)}
-                        placeholder="Enter Steam ID"
-                        className="flex-1 bg-dark-light border border-gray-700 rounded-lg px-4 py-2"
+                        placeholder="Enter your Steam ID"
+                        className="flex-1 bg-dark-light text-white placeholder-gray-500 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                     <button
-                        onClick={handleImport}
-                        disabled={isLoading}
-                        className="btn px-4 py-2 bg-primary-500 hover:bg-primary-600 rounded-lg transition-colors disabled:opacity-50"
+                        onClick={handleFetchGames}
+                        disabled={isLoading || !steamId}
+                        className="px-4 py-2 bg-primary-500 text-white rounded-lg disabled:opacity-50"
                     >
-                        {isLoading ? 'Importing...' : 'Import from Steam'}
+                        {isLoading ? 'Fetching...' : 'Fetch Games'}
                     </button>
                 </div>
-
-                {importProgress && (
-                    <div className="space-y-2">
-                        <div className="flex justify-between text-sm text-gray-400">
-                            <span>{importProgress.message}</span>
-                            <span>{importProgress.current}/{importProgress.total}</span>
-                        </div>
-                        <div className="w-full bg-gray-800 rounded-full h-3 overflow-hidden border border-gray-700">
-                            <div
-                                className={`h-full transition-all duration-300 rounded-full ${
-                                    importProgress.stage === 'complete'
-                                        ? 'bg-green-500'
-                                        : 'bg-blue-500'
-                                }`}
-                                style={{
-                                    width: `${(importProgress.current / importProgress.total) * 100}%`,
-                                    transition: 'width 0.3s ease-in-out'
-                                }}
-                            />
-                        </div>
+            )}
+            {error && (
+                <div className="text-red-500 mb-4">{error}</div>
+            )}
+            {isImporting && (
+                <div className="space-y-2">
+                    <div className="text-gray-300">
+                        Importing games... {importProgress.current}/{importProgress.total}
                     </div>
-                )}
-
-                {importedGames.length > 0 && (
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <h3 className="text-lg font-semibold">
-                                    Imported Games ({selectedGames.size} selected)
-                                </h3>
-                                <p className="text-sm text-gray-400">
-                                    ✅ Matched: {matchedGames.length} games |
-                                    ❌ Unmatched: {unmatchedGames.length} games
-                                </p>
-                            </div>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={handleBulkImport}
-                                    disabled={isLoading || selectedGames.size === 0}
-                                    className="px-4 py-2 bg-green-500 hover:bg-green-600 rounded-lg disabled:opacity-50"
-                                >
-                                    Add to Collection
-                                </button>
-                                <button
-                                    onClick={handleExport}
-                                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg"
-                                >
-                                    Export
-                                </button>
-                            </div>
+                    <div className="w-full h-3 bg-dark-light rounded-full overflow-hidden">
+                        <div
+                            className="h-full bg-primary-500 transition-all duration-300"
+                            style={{width: `${(importProgress.current / importProgress.total) * 100}%`}}
+                        />
+                    </div>
+                </div>
+            )}
+            {availableGames.length > 0 && !isImporting && (
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                        <button
+                            onClick={toggleAllGames}
+                            className="text-sm text-primary-500 hover:text-primary-400"
+                        >
+                            {selectedGames.size === availableGames.length ? 'Deselect All' : 'Select All'}
+                        </button>
+                        <div className="text-sm text-gray-400">
+                            Found {availableGames.length} games ({availableGames.filter(g => g.igdb_id).length} matched)
                         </div>
-
-                        <div className="flex gap-4 items-center">
-                            <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleImportSelected}
+                            disabled={selectedGames.size === 0}
+                            className="px-4 py-2 bg-primary-500 text-white rounded-lg disabled:opacity-50"
+                        >
+                            Import Selected ({selectedGames.size})
+                        </button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[70vh] overflow-y-auto p-2">
+                        {availableGames.map((game, index) => (
+                            <div
+                                key={`${game.igdb_id || 'unmatched'}-${game.name}-${index}`}
+                                className={`flex gap-4 p-4 rounded-lg ${game.igdb_id ? 'bg-dark-light' : 'bg-dark-lighter border border-red-900'}`}
+                            >
                                 <input
                                     type="checkbox"
-                                    checked={allSelected}
-                                    onChange={(e) => handleSelectAll(e.target.checked)}
-                                    className="w-5 h-5"
+                                    checked={selectedGames.has(game.igdb_id)}
+                                    onChange={() => toggleGameSelection(game.igdb_id)}
+                                    className="w-5 h-5 rounded border-gray-600 text-primary-500 focus:ring-primary-500"
+                                    disabled={!game.igdb_id}
                                 />
-                                <span className="text-sm text-gray-400">Select All</span>
-                            </div>
-                            <input
-                                type="text"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder="Search games..."
-                                className="flex-1 bg-dark-light border border-gray-700 rounded-lg px-4 py-2"
-                            />
-                            <button
-                                onClick={() => setShowUnmatched(!showUnmatched)}
-                                className={`px-4 py-2 rounded-lg border ${
-                                    showUnmatched
-                                        ? 'bg-red-500/10 text-red-500 border-red-500'
-                                        : 'bg-dark-light text-gray-400 border-gray-700'
-                                }`}
-                            >
-                                {showUnmatched ? 'Show All Games' : 'Show Unmatched'}
-                            </button>
-                        </div>
-
-                        <div className="space-y-2 max-h-96 overflow-y-auto
-                                        scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800
-                                        hover:scrollbar-thumb-gray-600">
-                            {filteredGames.map(game => (
-                                <div
-                                    key={game.id}
-                                    className={`flex items-center gap-4 p-3 rounded-lg ${
-                                        game.igdb_id === 0
-                                            ? 'bg-red-500/10 border border-red-500/20'
-                                            : 'bg-dark-light'
-                                    }`}
-                                >
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedGames.has(game.id)}
-                                        onChange={(e) => {
-                                            const newSelected = new Set(selectedGames);
-                                            if (e.target.checked) {
-                                                newSelected.add(game.id);
-                                            } else {
-                                                newSelected.delete(game.id);
-                                            }
-                                            setSelectedGames(newSelected);
-                                        }}
-                                        className="w-5 h-5"
-                                        disabled={importStatus[game.id]?.status === 'importing'}
-                                    />
+                                <div className="flex gap-4 flex-1">
                                     {game.cover_url ? (
                                         <img
                                             src={game.cover_url}
                                             alt={game.name}
-                                            className="w-16 h-20 object-cover rounded"
+                                            className="w-16 h-24 object-cover rounded"
                                         />
                                     ) : (
-                                        <div className="w-16 h-20 bg-dark flex items-center justify-center rounded">
-                                            <span className="text-gray-500">No Cover</span>
+                                        <div className="w-16 h-24 bg-dark flex items-center justify-center rounded">
+                                            <span className="text-gray-600">No Image</span>
                                         </div>
                                     )}
                                     <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <h4 className="font-medium">{game.name}</h4>
-                                            {game.igdb_id === 0 && (
-                                                <span
-                                                    className="text-xs text-red-500 bg-red-500/10 px-2 py-0.5 rounded">
-                                                    No IGDB Match
-                                                </span>
+                                        <h4 className="font-medium mb-1">{game.name}</h4>
+                                        <div className="space-y-1">
+                                            {game.playtime_minutes !== undefined && (
+                                                <p className="text-sm text-gray-400">
+                                                    Playtime: {Math.round(game.playtime_minutes / 60)} hours
+                                                </p>
                                             )}
-                                            {importStatus[game.id] && (
-                                                <div className="flex items-center gap-2">
-                                                    {importStatus[game.id].status === 'pending' && (
-                                                        <span
-                                                            className="text-xs text-gray-400 bg-gray-400/10 px-2 py-0.5 rounded">
-                                                            Pending
-                                                        </span>
-                                                    )}
-                                                    {importStatus[game.id].status === 'importing' && (
-                                                        <span
-                                                            className="text-xs text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded flex items-center gap-1">
-                                                            <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
-                                                                <circle className="opacity-25" cx="12" cy="12" r="10"
-                                                                        stroke="currentColor" strokeWidth="4"
-                                                                        fill="none"/>
-                                                                <path className="opacity-75" fill="currentColor"
-                                                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                                                            </svg>
-                                                            Importing
-                                                        </span>
-                                                    )}
-                                                    {importStatus[game.id].status === 'success' && (
-                                                        <span
-                                                            className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded flex items-center gap-1">
-                                                            <svg className="h-3 w-3" viewBox="0 0 20 20"
-                                                                 fill="currentColor">
-                                                                <path fillRule="evenodd"
-                                                                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                                                      clipRule="evenodd"/>
-                                                            </svg>
-                                                            Added
-                                                        </span>
-                                                    )}
-                                                    {importStatus[game.id].status === 'error' && (
-                                                        <span
-                                                            className="text-xs text-red-500 bg-red-500/10 px-2 py-0.5 rounded flex items-center gap-1">
-                                                            <svg className="h-3 w-3" viewBox="0 0 20 20"
-                                                                 fill="currentColor">
-                                                                <path fillRule="evenodd"
-                                                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                                                                      clipRule="evenodd"/>
-                                                            </svg>
-                                                            Failed
-                                                        </span>
-                                                    )}
-                                                </div>
+                                            {game.last_played_at && (
+                                                <p className="text-sm text-gray-400">
+                                                    Last played: {new Date(game.last_played_at).toLocaleDateString()}
+                                                </p>
                                             )}
+                                            <div className={`text-sm ${game.igdb_id ? 'text-green-500' : 'text-red-500'}`}>
+                                                {game.igdb_id ? 'Matched with IGDB' : 'No IGDB match found'}
+                                            </div>
                                         </div>
-                                        {game.year > 0 && (
-                                            <p className="text-sm text-gray-400">
-                                                Released: {game.year}
-                                            </p>
-                                        )}
-                                        {game.playtime_minutes > 0 && (
-                                            <p className="text-sm text-gray-400">
-                                                Playtime: {Math.floor(game.playtime_minutes / 60)}h {game.playtime_minutes % 60}m
-                                            </p>
-                                        )}
-                                        {game.last_played && (
-                                            <p className="text-sm text-gray-400">
-                                                Last played: {new Date(game.last_played).toLocaleDateString()}
-                                            </p>
-                                        )}
-                                        {game.description && (
-                                            <p className="text-sm text-gray-400 mt-2 line-clamp-2">
-                                                {game.description}
-                                            </p>
-                                        )}
-                                        {importStatus[game.id]?.error && (
-                                            <p className="text-xs text-red-500 mt-1">
-                                                {importStatus[game.id].error}
-                                            </p>
-                                        )}
                                     </div>
                                 </div>
-                            ))}
-                        </div>
+                            </div>
+                        ))}
                     </div>
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
 };

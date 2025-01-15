@@ -1,11 +1,12 @@
 import { gql } from '@apollo/client';
 
 export const GET_USER = gql`
-    query GetUser($id: Int!) {
-        users_by_pk(id: $id) {
+    query GetUser($userId: Int!) {
+        users_by_pk(id: $userId) {
             id
             username
             email
+            steam_id
             created_at
             updated_at
         }

@@ -1,12 +1,19 @@
 import {gql} from '@apollo/client';
 
 export const GET_DATA = gql`
-    query GetUserGames($userId: Int!, $orderBy: [game_progress_order_by!]) {
+    query GetData($userId: Int!, $orderBy: [game_progress_order_by!]) {
         game_progress(
             where: { user_id: { _eq: $userId } }
             order_by: $orderBy
         ) {
-            id
+            game {
+                id
+                name
+                description
+                year
+                cover_url
+                slug
+            }
             status
             playtime_minutes
             completion_percentage
@@ -15,15 +22,9 @@ export const GET_DATA = gql`
             current_rank
             peak_rank
             is_favorite
-            game {
+            user {
                 id
-                name
-                description
-                year
-                igdb_id
-                slug
-                cover_url
-                is_competitive
+                steam_id
             }
         }
     }
@@ -66,6 +67,7 @@ export const ADD_GAME_PROGRESS = gql`
     mutation AddGameProgress(
         $userId: Int!,
         $gameId: Int!,
+        $status: game_status!,
         $playtimeMinutes: Int = 0,
         $lastPlayed: timestamptz
     ) {
@@ -73,7 +75,7 @@ export const ADD_GAME_PROGRESS = gql`
             object: {
                 user_id: $userId,
                 game_id: $gameId,
-                status: "NOT_STARTED",
+                status: $status,
                 playtime_minutes: $playtimeMinutes,
                 last_played_at: $lastPlayed,
                 completion_percentage: 0

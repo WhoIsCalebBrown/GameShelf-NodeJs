@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation } from '@apollo/client';
-import { UPDATE_GAME_STATUS, UPDATE_GAME_PROGRESS, UPDATE_GAME_COMPETITIVE, UPDATE_GAME_FAVORITE, GET_DATA } from '../queries/queries';
+import { UPDATE_GAME_STATUS, UPDATE_GAME_PROGRESS, UPDATE_GAME_COMPETITIVE, UPDATE_GAME_FAVORITE} from '../queries/queries';
 import { game_status } from '../types/game';
 import { GameCardProps, DropdownMenuProps } from '../types/props';
 import { useAuth } from '../context/AuthContext';
@@ -74,36 +74,153 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions, onStatusChange, onDe
     const [lastPlayed, setLastPlayed] = useState(game.last_played_at ? new Date(game.last_played_at).toISOString().split('T')[0] : '');
 
     const [updateStatus] = useMutation(UPDATE_GAME_STATUS, {
-        refetchQueries: [{ query: GET_DATA }]
+        optimisticResponse: ({ status }) => ({
+            update_game_progress: {
+                returning: [{
+                    id: game.id,
+                    status,
+                    game_id: game.id,
+                    __typename: 'game_progress'
+                }],
+                __typename: 'game_progress_mutation_response'
+            }
+        }),
+        update(cache, { data }) {
+            if (data?.update_game_progress?.returning?.[0]) {
+                const updatedGame = data.update_game_progress.returning[0];
+                cache.modify({
+                    fields: {
+                        game_progress(existingGames = [], { readField }) {
+                            return existingGames.map((gameRef: any) => {
+                                const gameId = readField('game_id', gameRef) || readField('id', readField('game', gameRef));
+                                if (gameId === game.id) {
+                                    return {
+                                        ...gameRef,
+                                        status: updatedGame.status
+                                    };
+                                }
+                                return gameRef;
+                            });
+                        }
+                    }
+                });
+            }
+        }
     });
 
     const [updateProgress] = useMutation(UPDATE_GAME_PROGRESS, {
-        refetchQueries: [{ query: GET_DATA }]
+        optimisticResponse: ({ playtimeMinutes, completionPercentage, currentRank, peakRank, notes, lastPlayedAt }) => ({
+            update_game_progress: {
+                returning: [{
+                    user_id: user?.id,
+                    game_id: game.id,
+                    status: game.status,
+                    playtime_minutes: playtimeMinutes,
+                    completion_percentage: completionPercentage,
+                    current_rank: currentRank,
+                    peak_rank: peakRank,
+                    notes,
+                    last_played_at: lastPlayedAt,
+                    __typename: 'game_progress'
+                }],
+                __typename: 'game_progress_mutation_response'
+            }
+        }),
+        update(cache, { data }) {
+            if (data?.update_game_progress?.returning?.[0]) {
+                const updatedGame = data.update_game_progress.returning[0];
+                cache.modify({
+                    fields: {
+                        game_progress(existingGames = [], { readField }) {
+                            return existingGames.map((gameRef: any) => {
+                                const gameId = readField('game_id', gameRef) || readField('id', readField('game', gameRef));
+                                if (gameId === game.id) {
+                                    return {
+                                        ...gameRef,
+                                        playtime_minutes: updatedGame.playtime_minutes,
+                                        completion_percentage: updatedGame.completion_percentage,
+                                        current_rank: updatedGame.current_rank,
+                                        peak_rank: updatedGame.peak_rank,
+                                        notes: updatedGame.notes,
+                                        last_played_at: updatedGame.last_played_at
+                                    };
+                                }
+                                return gameRef;
+                            });
+                        }
+                    }
+                });
+            }
+        }
     });
 
     const [updateCompetitive] = useMutation(UPDATE_GAME_COMPETITIVE, {
-        refetchQueries: [{ 
-            query: GET_DATA,
-            variables: {
-                userId: user?.id,
-                orderBy: [{ status: 'asc' }]
+        optimisticResponse: ({ isCompetitive }) => ({
+            update_games_by_pk: {
+                id: game.id,
+                is_competitive: isCompetitive,
+                __typename: 'games'
             }
-        }],
-        onError: (error) => {
-            console.error('Failed to update competitive status:', error);
+        }),
+        update(cache, { data }) {
+            if (data?.update_games_by_pk) {
+                const updatedGame = data.update_games_by_pk;
+                cache.modify({
+                    fields: {
+                        game_progress(existingGames = [], { readField }) {
+                            return existingGames.map((gameRef: any) => {
+                                const gameId = readField('game_id', gameRef) || readField('id', readField('game', gameRef));
+                                if (gameId === game.id) {
+                                    const gameData = readField('game', gameRef) as Record<string, any>;
+                                    return {
+                                        ...gameRef,
+                                        game: {
+                                            ...gameData,
+                                            is_competitive: updatedGame.is_competitive,
+                                            __typename: 'games'
+                                        }
+                                    };
+                                }
+                                return gameRef;
+                            });
+                        }
+                    }
+                });
+            }
         }
     });
 
     const [updateFavorite] = useMutation(UPDATE_GAME_FAVORITE, {
-        refetchQueries: [{ 
-            query: GET_DATA,
-            variables: {
-                userId: user?.id,
-                orderBy: [{ status: 'asc' }]
+        optimisticResponse: ({ isFavorite }) => ({
+            update_game_progress: {
+                returning: [{
+                    id: game.id,
+                    is_favorite: isFavorite,
+                    __typename: 'game_progress'
+                }],
+                __typename: 'game_progress_mutation_response'
             }
-        }],
-        onError: (error) => {
-            console.error('Failed to update favorite status:', error);
+        }),
+        update(cache, { data }) {
+            if (data?.update_game_progress?.returning?.[0]) {
+                const updatedGame = data.update_game_progress.returning[0];
+                cache.modify({
+                    fields: {
+                        game_progress(existingGames = [], { readField }) {
+                            return existingGames.map((gameRef: any) => {
+                                const gameId = readField('game_id', gameRef) || readField('id', readField('game', gameRef));
+                                if (gameId === game.id) {
+                                    return {
+                                        ...gameRef,
+                                        is_favorite: updatedGame.is_favorite
+                                    };
+                                }
+                                return gameRef;
+                            });
+                        }
+                    }
+                });
+            }
         }
     });
 

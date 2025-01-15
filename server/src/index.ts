@@ -1,5 +1,6 @@
 import path from 'path';
 import dotenv from 'dotenv';
+import cors from 'cors';
 
 // Load environment variables before any other imports
 dotenv.config();
@@ -7,7 +8,8 @@ dotenv.config();
 import express from 'express';
 import igdbRoutes from './routes/igdb';
 import authRoutes from './routes/auth';
-import steamRoutes from './routes/auth/steam';
+import steamAuthRoutes from './routes/auth/steam';
+import steamApiRoutes from './routes/steam';
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -15,13 +17,17 @@ const port = process.env.PORT || 3001;
 // Middleware
 app.use(express.json());
 
+// Enable CORS for client requests
+app.use(cors({
+    origin: 'http://localhost:3000',
+    credentials: true
+}));
+
 // Routes
 app.use('/api/igdb', igdbRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/steam', steamRoutes);
-
-// Steam Authentication routes
-app.use('/auth/steam', steamRoutes);
+app.use('/api/steam', steamApiRoutes);
+app.use('/auth/steam', steamAuthRoutes);
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
