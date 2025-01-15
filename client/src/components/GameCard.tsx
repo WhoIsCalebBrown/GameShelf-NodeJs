@@ -167,18 +167,27 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions, onStatusChange, onDe
                 const updatedGame = data.update_games_by_pk;
                 cache.modify({
                     fields: {
-                        game_progress(existingGames = [], { readField }) {
+                        game_progress(existingGames = [], { readField, toReference }) {
                             return existingGames.map((gameRef: any) => {
                                 const gameId = readField('game_id', gameRef) || readField('id', readField('game', gameRef));
                                 if (gameId === game.id) {
-                                    const gameData = readField('game', gameRef) as Record<string, any>;
+                                    const gameField = readField('game', gameRef) as {
+                                        id: number;
+                                        name: string;
+                                        description?: string;
+                                        year?: number;
+                                        cover_url?: string;
+                                        slug: string;
+                                        is_competitive: boolean;
+                                        __typename: 'games';
+                                    };
                                     return {
                                         ...gameRef,
-                                        game: {
-                                            ...gameData,
+                                        game: toReference({
+                                            ...gameField,
                                             is_competitive: updatedGame.is_competitive,
                                             __typename: 'games'
-                                        }
+                                        })
                                     };
                                 }
                                 return gameRef;
@@ -277,19 +286,13 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions, onStatusChange, onDe
     };
 
     const handleCompetitiveToggle = async () => {
-        console.log('Toggling competitive status:', {
-            gameId: game.id,
-            currentIsCompetitive: game.is_competitive,
-            newIsCompetitive: !game.is_competitive
-        });
         try {
-            const result = await updateCompetitive({
+            await updateCompetitive({
                 variables: {
                     gameId: game.id,
                     isCompetitive: !game.is_competitive
                 }
             });
-            console.log('Update competitive result:', result);
         } catch (error) {
             console.error('Failed to update competitive status:', error);
         }

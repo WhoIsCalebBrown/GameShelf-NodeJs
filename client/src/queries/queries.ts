@@ -13,6 +13,7 @@ export const GET_DATA = gql`
                 year
                 cover_url
                 slug
+                is_competitive
             }
             status
             playtime_minutes
