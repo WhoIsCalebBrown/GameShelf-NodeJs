@@ -43,6 +43,7 @@ SortButton.displayName = 'SortButton';
 
 const GameCollection: React.FC = () => {
     const {user} = useAuth();
+    const [searchTerm, setSearchTerm] = useState('');
     const [sortConfig, setSortConfig] = useState<SortConfig>(() => {
         const saved = localStorage.getItem('gameshelf-sort-config');
         return saved ? JSON.parse(saved) : {
@@ -224,11 +225,14 @@ const GameCollection: React.FC = () => {
         });
     }, [sortConfig]);
 
-    const sortedGames = React.useMemo(() => {
-        const favoriteGames = sortGames(games.filter(game => game.is_favorite));
-        const regularGames = sortGames(games.filter(game => !game.is_favorite));
+    const filteredGames = React.useMemo(() => {
+        const filtered = games.filter(game => 
+            game.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        const favoriteGames = sortGames(filtered.filter(game => game.is_favorite));
+        const regularGames = sortGames(filtered.filter(game => !game.is_favorite));
         return { favoriteGames, regularGames };
-    }, [games, sortGames]);
+    }, [games, searchTerm, sortGames]);
 
     const memoizedGameStats = React.useMemo(() => (
         <GameStats games={games} />
@@ -237,16 +241,16 @@ const GameCollection: React.FC = () => {
     const { playedGames, neverPlayedGames } = React.useMemo(() => {
         if (!groupUnplayed) {
             return {
-                playedGames: sortedGames.regularGames,
+                playedGames: filteredGames.regularGames,
                 neverPlayedGames: []
             };
         }
 
         return {
-            playedGames: sortedGames.regularGames.filter(game => game.last_played_at !== null),
-            neverPlayedGames: sortedGames.regularGames.filter(game => game.last_played_at === null)
+            playedGames: filteredGames.regularGames.filter(game => game.last_played_at !== null),
+            neverPlayedGames: filteredGames.regularGames.filter(game => game.last_played_at === null)
         };
-    }, [sortedGames.regularGames, groupUnplayed]);
+    }, [filteredGames.regularGames, groupUnplayed]);
 
     const showLoading = loading && networkStatus === NetworkStatus.loading;
 
@@ -263,6 +267,14 @@ const GameCollection: React.FC = () => {
     return (
         <div className="space-y-6 bg-dark p-8 rounded-lg">
             <div className="flex flex-wrap gap-4 items-center bg-dark-light p-2 rounded-lg">
+                <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search games..."
+                    className="px-4 py-2 bg-dark rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+                
                 <SortButton field="name" label="Name" sortConfig={sortConfig} onSort={handleSort} />
                 <SortButton field="status" label="Status" sortConfig={sortConfig} onSort={handleSort} />
                 <SortButton field="year" label="Year" sortConfig={sortConfig} onSort={handleSort} />
@@ -319,11 +331,11 @@ const GameCollection: React.FC = () => {
             ) : (
                 <>
                     {/* Favorite Games Section */}
-                    {sortedGames.favoriteGames.length > 0 && (
+                    {filteredGames.favoriteGames.length > 0 && (
                         <div className="space-y-4">
                             <h3 className="text-xl font-semibold text-primary-400">Favorite Games</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                {sortedGames.favoriteGames.map((game: Game) => (
+                                {filteredGames.favoriteGames.map((game: Game) => (
                                     <div key={game.id} className="transition-all duration-300 ease-in-out">
                                         <GameCard
                                             game={game}
@@ -338,7 +350,7 @@ const GameCollection: React.FC = () => {
 
                     {/* Regular Games Section */}
                     <div className="space-y-4">
-                        {(sortedGames.favoriteGames.length > 0 || groupUnplayed) && (
+                        {(filteredGames.favoriteGames.length > 0 || groupUnplayed) && (
                             <h3 className="text-xl font-semibold my-10">
                                 {groupUnplayed ? 'Played Games' : 'All Games'}
                             </h3>
