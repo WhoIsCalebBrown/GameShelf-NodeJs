@@ -13,8 +13,8 @@ export const GET_USER = gql`
     }
 `;
 
-export const GET_USER_GAME_PROGRESS = gql`
-    query GetUserGameProgress($userId: Int!) {
+export const GET_USER_GAME_PROGRESSES = gql`
+    query GetUserGameProgresses($userId: Int!) {
         game_progress(where: { user_id: { _eq: $userId } }) {
             id
             playtime_minutes

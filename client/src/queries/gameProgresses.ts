@@ -1,7 +1,7 @@
-import {gql} from '@apollo/client';
+import { gql } from '@apollo/client';
 
-export const GET_DATA = gql`
-    query GetData($userId: Int!, $orderBy: [game_progress_order_by!]) {
+export const GET_GAME_COLLECTION = gql`
+    query GetGameCollection($userId: Int!, $orderBy: [game_progress_order_by!]) {
         game_progress(
             where: { user_id: { _eq: $userId } }
             order_by: $orderBy
@@ -31,41 +31,8 @@ export const GET_DATA = gql`
     }
 `;
 
-export const ADD_GAME = gql`
-    mutation AddGame(
-        $name: String!,
-        $description: String,
-        $year: Int,
-        $igdb_id: Int!,
-        $slug: String!,
-        $cover_url: String
-    ) {
-        insert_games_one(
-            object: {
-                name: $name,
-                description: $description,
-                year: $year,
-                igdb_id: $igdb_id,
-                slug: $slug,
-                cover_url: $cover_url
-            },
-            on_conflict: {
-                update_columns: [name, description, year, slug, cover_url],
-                constraint: games_igdb_id_key}
-        ) {
-            id
-            name
-            description
-            year
-            igdb_id
-            slug
-            cover_url
-        }
-    }
-`;
-
-export const ADD_GAME_PROGRESS = gql`
-    mutation AddGameProgress(
+export const CREATE_GAME_PROGRESS = gql`
+    mutation CreateGameProgress(
         $userId: Int!,
         $gameId: Int!,
         $status: game_status!,
@@ -102,8 +69,7 @@ export const ADD_GAME_PROGRESS = gql`
     }
 `;
 
-
-export const DELETE_GAME = gql`
+export const DELETE_GAME_PROGRESS = gql`
     mutation DeleteGameProgress($userId: Int!, $gameId: Int!) {
         delete_game_progress(
             where: {
@@ -119,8 +85,8 @@ export const DELETE_GAME = gql`
     }
 `;
 
-export const UPDATE_GAME_STATUS = gql`
-    mutation UpdateGameStatus($userId: Int!, $gameId: Int!, $status: game_status!) {
+export const UPDATE_GAME_PROGRESS_STATUS = gql`
+    mutation UpdateGameProgressStatus($userId: Int!, $gameId: Int!, $status: game_status!) {
         update_game_progress(
             where: {
                 user_id: { _eq: $userId },
@@ -177,56 +143,8 @@ export const UPDATE_GAME_PROGRESS = gql`
     }
 `;
 
-export const UPDATE_GAME_COMPETITIVE = gql`
-    mutation UpdateGameCompetitive($gameId: Int!, $isCompetitive: Boolean!) {
-        update_games_by_pk(
-            pk_columns: { id: $gameId },
-            _set: { is_competitive: $isCompetitive }
-        ) {
-            id
-            is_competitive
-        }
-    }
-`;
-
-export const BULK_ADD_GAMES = gql`
-    mutation BulkAddGames($games: [games_insert_input!]!) {
-        insert_games(
-            objects: $games,
-            on_conflict: {
-                constraint: games_igdb_id_key,
-                update_columns: [name, description, year, slug, cover_url]
-            }
-        ) {
-            returning {
-                id
-                igdb_id
-                name
-            }
-        }
-    }
-`;
-
-export const BULK_ADD_GAME_PROGRESS = gql`
-    mutation BulkAddGameProgress($progresses: [game_progress_insert_input!]!) {
-        insert_game_progress(
-            objects: $progresses,
-            on_conflict: {
-                constraint: game_progress_user_id_game_id_key,
-                update_columns: [playtime_minutes, last_played_at]
-            }
-        ) {
-            returning {
-                id
-                game_id
-                user_id
-            }
-        }
-    }
-`;
-
-export const UPDATE_GAME_FAVORITE = gql`
-    mutation UpdateGameFavorite($userId: Int!, $gameId: Int!, $isFavorite: Boolean!) {
+export const UPDATE_GAME_PROGRESS_FAVORITE = gql`
+    mutation UpdateGameProgressFavorite($userId: Int!, $gameId: Int!, $isFavorite: Boolean!) {
         update_game_progress(
             where: {
                 user_id: { _eq: $userId },

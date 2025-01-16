@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@apollo/client';
-import { GET_DATA } from '../queries/queries';
+import { GET_GAME_COLLECTION } from '../queries';
 import { game_status, game_status_labels } from '../types/game';
 import { useAuth } from '../context/AuthContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
@@ -20,7 +20,7 @@ const CHART_COLORS = {
 
 const Home: React.FC = () => {
     const { user } = useAuth();
-    const { loading, error, data } = useQuery(GET_DATA, {
+    const { loading, error, data } = useQuery(GET_GAME_COLLECTION, {
         variables: {
             userId: user?.id,
             orderBy: [{ status: 'asc' }]

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { searchgames, getTrendinggames } from '../services/igdb';
 import { useMutation } from '@apollo/client';
-import { ADD_GAME, ADD_GAME_PROGRESS, GET_DATA } from '../queries/queries';
+import { CREATE_GAME, CREATE_GAME_PROGRESS, GET_GAME_COLLECTION } from '../queries';
 import { IGDBGame } from '../types/game';
 import { GameSearchProps } from '../types/props';
 import { useAuth } from '../context/AuthContext';
@@ -170,11 +170,11 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
         loadTrendinggames();
     }, []);
 
-    const [addGame] = useMutation(ADD_GAME);
-    const [addGameProgress] = useMutation(ADD_GAME_PROGRESS, {
+    const [addGame] = useMutation(CREATE_GAME);
+    const [addGameProgress] = useMutation(CREATE_GAME_PROGRESS, {
         update(cache, { data: { insert_game_progress_one } }) {
             const existingData = cache.readQuery<{ game_progress: any[] }>({
-                query: GET_DATA,
+                query: GET_GAME_COLLECTION,
                 variables: { 
                     userId: user?.id,
                     orderBy: [{ status: 'asc' }]
@@ -183,7 +183,7 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
 
             if (existingData) {
                 cache.writeQuery({
-                    query: GET_DATA,
+                    query: GET_GAME_COLLECTION,
                     variables: { 
                         userId: user?.id,
                         orderBy: [{ status: 'asc' }]

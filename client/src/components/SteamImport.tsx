@@ -2,7 +2,7 @@ import React, {useState, useEffect, useCallback} from 'react';
 import {useAuth} from '../context/AuthContext';
 import {importSteamLibrary} from '../services/steam';
 import {useMutation} from '@apollo/client';
-import {BULK_ADD_GAMES, BULK_ADD_GAME_PROGRESS, GET_DATA} from '../queries/queries';
+import {CREATE_BULK_GAMES, CREATE_BULK_GAME_PROGRESSES, GET_GAME_COLLECTION} from '../queries';
 
 interface SteamImportProps {
     autoImport?: boolean;
@@ -31,11 +31,11 @@ const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSte
     const [availableGames, setAvailableGames] = useState<SteamGame[]>([]);
     const [selectedGames, setSelectedGames] = useState<Set<number>>(new Set());
 
-    const [bulkAddGames] = useMutation(BULK_ADD_GAMES);
-    const [bulkAddGameProgress] = useMutation(BULK_ADD_GAME_PROGRESS, {
+    const [bulkAddGames] = useMutation(CREATE_BULK_GAMES);
+    const [bulkAddGameProgress] = useMutation(CREATE_BULK_GAME_PROGRESSES, {
         refetchQueries: [
             {
-                query: GET_DATA,
+                query: GET_GAME_COLLECTION,
                 variables: {
                     userId: user?.id,
                     orderBy: [

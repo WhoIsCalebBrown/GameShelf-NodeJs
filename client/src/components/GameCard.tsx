@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation } from '@apollo/client';
-import { UPDATE_GAME_STATUS, UPDATE_GAME_PROGRESS, UPDATE_GAME_COMPETITIVE, UPDATE_GAME_FAVORITE} from '../queries/queries';
+import { UPDATE_GAME_PROGRESS_STATUS, UPDATE_GAME_PROGRESS, UPDATE_GAME_COMPETITIVE_STATUS, UPDATE_GAME_PROGRESS_FAVORITE } from '../queries';
 import { game_status } from '../types/game';
 import { GameCardProps, DropdownMenuProps } from '../types/props';
 import { useAuth } from '../context/AuthContext';
@@ -73,7 +73,7 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions, onStatusChange, onDe
     const [notes, setNotes] = useState(game.notes || '');
     const [lastPlayed, setLastPlayed] = useState(game.last_played_at ? new Date(game.last_played_at).toISOString().split('T')[0] : '');
 
-    const [updateStatus] = useMutation(UPDATE_GAME_STATUS, {
+    const [updateStatus] = useMutation(UPDATE_GAME_PROGRESS_STATUS, {
         optimisticResponse: ({ status }) => ({
             update_game_progress: {
                 returning: [{
@@ -154,7 +154,7 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions, onStatusChange, onDe
         }
     });
 
-    const [updateCompetitive] = useMutation(UPDATE_GAME_COMPETITIVE, {
+    const [updateCompetitive] = useMutation(UPDATE_GAME_COMPETITIVE_STATUS, {
         optimisticResponse: ({ isCompetitive }) => ({
             update_games_by_pk: {
                 id: game.id,
@@ -199,7 +199,7 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions, onStatusChange, onDe
         }
     });
 
-    const [updateFavorite] = useMutation(UPDATE_GAME_FAVORITE, {
+    const [updateFavorite] = useMutation(UPDATE_GAME_PROGRESS_FAVORITE, {
         optimisticResponse: ({ isFavorite }) => ({
             update_game_progress: {
                 returning: [{

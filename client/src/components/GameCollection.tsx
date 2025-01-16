@@ -1,6 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import {useQuery, useMutation, NetworkStatus} from '@apollo/client';
-import {GET_DATA, DELETE_GAME, UPDATE_GAME_STATUS} from '../queries/queries';
+import {GET_GAME_COLLECTION, DELETE_GAME_PROGRESS, UPDATE_GAME_PROGRESS_STATUS} from '../queries';
 import GameCard from './GameCard';
 import {Game, game_status} from '../types/game';
 import {SortConfig} from '../types/api';
@@ -79,7 +79,7 @@ const GameCollection: React.FC = () => {
         localStorage.setItem('gameshelf-group-unplayed', String(groupUnplayed));
     }, [groupUnplayed]);
 
-    const {loading, error, data, networkStatus} = useQuery(GET_DATA, {
+    const {loading, error, data, networkStatus} = useQuery(GET_GAME_COLLECTION, {
         variables: {
             userId: user?.id,
             orderBy: [{ status: 'asc' }]
@@ -89,11 +89,11 @@ const GameCollection: React.FC = () => {
         skip: !user?.id
     });
 
-    const [deleteGame] = useMutation(DELETE_GAME, {
+    const [deleteGame] = useMutation(DELETE_GAME_PROGRESS, {
         update(cache, {data: {delete_game_progress}}) {
             try {
                 const existingData = cache.readQuery<{ game_progress: { game: { id: string } }[] }>({
-                    query: GET_DATA,
+                    query: GET_GAME_COLLECTION,
                     variables: {
                         userId: user?.id,
                         orderBy: [{ status: 'asc' }]
@@ -107,7 +107,7 @@ const GameCollection: React.FC = () => {
                     );
 
                     cache.writeQuery({
-                        query: GET_DATA,
+                        query: GET_GAME_COLLECTION,
                         variables: {
                             userId: user?.id,
                             orderBy: [{ status: 'asc' }]
@@ -121,10 +121,10 @@ const GameCollection: React.FC = () => {
         }
     });
 
-    const [updateGameStatus] = useMutation(UPDATE_GAME_STATUS, {
+    const [updateGameStatus] = useMutation(UPDATE_GAME_PROGRESS_STATUS, {
         update(cache, {data: {update_game_progress}}) {
             const existingData = cache.readQuery<GameProgressData>({
-                query: GET_DATA,
+                query: GET_GAME_COLLECTION,
                 variables: {
                     userId: user?.id,
                     orderBy: [{ status: 'asc' }]
@@ -137,7 +137,7 @@ const GameCollection: React.FC = () => {
                         : progress
                 );
                 cache.writeQuery({
-                    query: GET_DATA,
+                    query: GET_GAME_COLLECTION,
                     variables: {
                         userId: user?.id,
                         orderBy: [{ status: 'asc' }]
