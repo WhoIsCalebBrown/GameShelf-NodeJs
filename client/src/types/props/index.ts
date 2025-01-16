@@ -1,11 +1,12 @@
-import { Game, game_status } from './game';
-import { GameProgress } from './user';
+import { Game } from '../models/Game';
+import { GameProgress } from '../models/GameProgress';
+import { GameStatus } from '../enums/gameStatus';
 import React from 'react';
 
 export interface GameCardProps {
     game: Game;
     actions?: React.ReactNode;
-    onStatusChange?: (status: game_status) => void;
+    onStatusChange?: (status: GameStatus) => void;
     onDelete?: () => void;
 }
 

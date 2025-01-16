@@ -1,10 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation } from '@apollo/client';
 import { UPDATE_GAME_PROGRESS_STATUS, UPDATE_GAME_PROGRESS, UPDATE_GAME_COMPETITIVE_STATUS, UPDATE_GAME_PROGRESS_FAVORITE } from '../gql';
-import { game_status, GameProgressRef } from '../types/game';
-import { GameCardProps, DropdownMenuProps } from '../types/props';
+import { GameStatus, GameProgressRef, Game } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { getRankColor, getPeakRankColor } from '../utils/rankColors';
+
+interface DropdownMenuProps {
+    onDelete: () => void;
+    onEdit: () => void;
+}
+
+interface GameCardProps {
+    game: Game;
+    onDelete?: () => void;
+    onStatusChange?: (status: GameStatus) => void;
+}
 
 const DropdownMenu: React.FC<DropdownMenuProps> = ({ onDelete, onEdit }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -62,7 +72,7 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({ onDelete, onEdit }) => {
 
 const GameCard: React.FC<GameCardProps> = ({ game, onDelete }) => {
     const { user } = useAuth();
-    const [localStatus, setLocalStatus] = useState<game_status | undefined>(game.status);
+    const [localStatus, setLocalStatus] = useState<GameStatus | undefined>(game.status);
     const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
     const [isGameModalOpen, setIsGameModalOpen] = useState(false);
     const [playtimeHours, setPlaytimeHours] = useState(Math.floor((game.playtime_minutes || 0) / 60));
@@ -244,9 +254,7 @@ const GameCard: React.FC<GameCardProps> = ({ game, onDelete }) => {
         setLastPlayed(game.last_played_at ? new Date(game.last_played_at).toISOString().split('T')[0] : '');
     }, [game]);
 
-    const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-        e.stopPropagation(); // Prevent card click
-        const newStatus = e.target.value as game_status;
+    const handleStatusChange = async (newStatus: GameStatus) => {
         try {
             await updateStatus({
                 variables: {
@@ -312,7 +320,7 @@ const GameCard: React.FC<GameCardProps> = ({ game, onDelete }) => {
         }
     };
 
-    const statusColors: Record<game_status, string> = {
+    const statusColors: Record<GameStatus, string> = {
         'not_started': 'text-gray-400',
         'in_progress': 'text-green-500',
         'completed': 'text-blue-500',
@@ -401,10 +409,10 @@ const GameCard: React.FC<GameCardProps> = ({ game, onDelete }) => {
                     {/* Status Selector */}
                     <select
                         value={localStatus || ''}
-                        onChange={handleStatusChange}
+                        onChange={(e) => handleStatusChange(e.target.value as GameStatus)}
                         onClick={(e) => e.stopPropagation()} // Prevent card click
                         className={`bg-dark/90 border border-gray-700 rounded-lg px-3 py-1.5 text-sm w-fit -mt-2 ${
-                            statusColors[localStatus as game_status] || 'text-gray-400'
+                            statusColors[localStatus as GameStatus] || 'text-gray-400'
                         }`}
                     >
                         <option value="" className="text-gray-400">Set Status</option>
@@ -455,7 +463,7 @@ const GameCard: React.FC<GameCardProps> = ({ game, onDelete }) => {
                                 <div className="mt-4 space-y-2">
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-400">Status:</span>
-                                        <span className={statusColors[localStatus as game_status]}>
+                                        <span className={statusColors[localStatus as GameStatus]}>
                                             {localStatus?.replace(/_/g, ' ') || 'Not Set'}
                                         </span>
                                     </div>

@@ -1,4 +1,4 @@
-import { Game } from './game';
+import { Game } from '../models/Game';
 
 export interface APIResponse<T> {
     data: T;
@@ -22,15 +22,16 @@ export interface GraphQLResponse<T> {
     }>;
 }
 
-export interface SortConfig {
-    field: 'name' | 'status' | 'year' | 'last_played_at' | 'playtime_minutes';
-    order: 'asc' | 'desc';
+export interface ImportStatus {
+    [key: number]: {
+        status: 'pending' | 'importing' | 'success' | 'error';
+        error?: string;
+    };
 }
 
-export interface QueryVariables {
-    userId?: number;
-    gameId?: number;
-    status?: string;
-    orderBy?: any[];
-    [key: string]: any;
+export interface ImportProgress {
+    stage: 'fetching' | 'matching' | 'importing' | 'complete';
+    current: number;
+    total: number;
+    message: string;
 } 

@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@apollo/client';
 import { GET_GAME_COLLECTION } from '../gql';
-import { game_status, game_status_labels } from '../types/game';
+import { GameStatus, GameStatusLabels, GameProgress } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
@@ -16,7 +16,7 @@ const CHART_COLORS = {
     'casual_rotation': '#F97316', // orange-500
     'retired': '#6B7280',      // gray-500
     'replaying': '#06B6D4'     // cyan-500
-};
+} as const;
 
 const Home: React.FC = () => {
     const { user } = useAuth();
@@ -28,17 +28,17 @@ const Home: React.FC = () => {
         skip: !user?.id
     });
 
-    const getStatusCount = (status: game_status) => {
+    const getStatusCount = (status: GameStatus) => {
         if (!data?.game_progress) return 0;
-        return data.game_progress.filter((progress: any) => progress.status === status).length;
+        return data.game_progress.filter((progress: GameProgress) => progress.status === status).length;
     };
 
 
     const getChartData = () => {
-        const statuses = Object.keys(game_status_labels) as game_status[];
+        const statuses = Object.keys(GameStatusLabels) as GameStatus[];
         return statuses
             .map(status => ({
-                name: game_status_labels[status],
+                name: GameStatusLabels[status],
                 value: getStatusCount(status)
             }))
             .filter(item => item.value > 0); // Only show statuses with games
@@ -173,7 +173,7 @@ const Home: React.FC = () => {
                                 {getChartData().map((entry, index) => (
                                     <Cell 
                                         key={`cell-${index}`}
-                                        fill={CHART_COLORS[Object.keys(game_status_labels)[index] as game_status]}
+                                        fill={CHART_COLORS[Object.keys(GameStatusLabels)[index] as GameStatus]}
                                     />
                                 ))}
                             </Pie>

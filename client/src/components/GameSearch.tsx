@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { searchgames, getTrendinggames } from '../services/igdb';
 import { useMutation } from '@apollo/client';
 import { CREATE_GAME, CREATE_GAME_PROGRESS, GET_GAME_COLLECTION } from '../gql';
-import { IGDBGame, GameProgressData } from '../types/game';
-import { GameSearchProps } from '../types/props';
+import { IGDBGame, GameProgressData } from '../types';
+import { GameSearchProps } from '../types';
 import { useAuth } from '../context/AuthContext';
 
 interface GameCardProps {
@@ -129,7 +129,7 @@ const GameCard: React.FC<GameCardProps> = ({ game, onAddGame }) => {
             <div className="mt-4">
                 <button 
                     onClick={() => onAddGame(game)}
-                    className="flex-1 bg-primary-500 hover:bg-primary-600 text-white rounded-lg py-2"
+                    className="btn bg-primary-500 hover:bg-primary-600 transition-colors disabled:opacity-50 min-w-[100px]"
                 >
                     Add to Collection
                 </button>
@@ -147,6 +147,17 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [isTrendingLoading, setIsTrendingLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+    // Clear success message after 3 seconds
+    useEffect(() => {
+        if (successMessage) {
+            const timer = setTimeout(() => {
+                setSuccessMessage(null);
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [successMessage]);
 
     // Advanced filter states
     const [showFilters, setShowFilters] = useState(false);
@@ -172,6 +183,10 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
 
     const [addGame] = useMutation(CREATE_GAME);
     const [addGameProgress] = useMutation(CREATE_GAME_PROGRESS, {
+        variables: {
+            userId: user?.id,
+            status: 'not_started'
+        },
         update(cache, { data: { insert_game_progress_one } }) {
             const existingData = cache.readQuery<GameProgressData>({
                 query: GET_GAME_COLLECTION,
@@ -193,6 +208,7 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
                     }
                 });
             }
+            setSuccessMessage(`${insert_game_progress_one.game.name} has been added to your collection!`);
         },
         onError: (error) => {
             setError(`Failed to add game progress: ${error.message}`);
@@ -462,6 +478,11 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
                 {error && (
                     <div className="text-red-500 mb-4 p-3 bg-red-500/10 rounded">
                         {error}
+                    </div>
+                )}
+                {successMessage && (
+                    <div className="bg-green-500/10 text-green-500 p-4 rounded-lg">
+                        {successMessage}
                     </div>
                 )}
 

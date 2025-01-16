@@ -2,9 +2,7 @@ import React, {useState, useEffect} from 'react';
 import {useQuery, useMutation, NetworkStatus} from '@apollo/client';
 import {GET_GAME_COLLECTION, DELETE_GAME_PROGRESS, UPDATE_GAME_PROGRESS_STATUS} from '../gql';
 import GameCard from './GameCard';
-import {Game, game_status} from '../types/game';
-import {SortConfig} from '../types/api';
-import {SortButtonProps} from '../types/props';
+import {Game, GameStatus, SortConfig, GameProgress, GameProgressData} from '../types';
 import GameStats from './GameStats';
 import SteamImport from './SteamImport';
 import {useAuth} from '../context/AuthContext';
@@ -12,28 +10,14 @@ import '../animations.css';
 
 type SortField = 'name' | 'status' | 'year' | 'last_played_at' | 'playtime_minutes';
 
-interface GameProgress {
-    game: Game;
-    status: game_status;
-    playtime_minutes: number;
-    completion_percentage: number;
-    last_played_at: string | null;
-    notes: string;
-    current_rank: string;
-    peak_rank: string;
-    is_favorite: boolean;
-}
-
-interface GameProgressData {
-    game_progress: GameProgress[];
-}
-
-interface ExtendedSortButtonProps extends SortButtonProps {
+interface SortButtonProps {
+    field: SortField;
+    label: string;
     sortConfig: SortConfig;
     onSort: (field: SortField) => void;
 }
 
-const SortButton = React.memo<ExtendedSortButtonProps>(({field, label, sortConfig, onSort}) => (
+const SortButton = React.memo<SortButtonProps>(({field, label, sortConfig, onSort}) => (
     <button
         onClick={() => onSort(field)}
         className={`
@@ -171,7 +155,7 @@ const GameCollection: React.FC = () => {
         }
     };
 
-    const handleStatusChange = async (gameId: number, newStatus: game_status) => {
+    const handleStatusChange = async (gameId: number, newStatus: GameStatus) => {
         if (!user?.id) return;
         try {
             await updateGameStatus({

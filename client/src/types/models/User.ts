@@ -1,5 +1,3 @@
-import { Game } from './game';
-
 export interface User {
     id: number;
     username: string;
@@ -12,23 +10,6 @@ export interface User {
         'x-hasura-default-role': string;
         'x-hasura-user-id': string;
     };
-}
-
-export interface GameProgress {
-    id: number;
-    user_id: number;
-    game_id: number;
-    playtime_minutes: number;
-    completion_percentage: number;
-    last_played_at: string | null;
-    notes: string | null;
-    current_rank: string | null;
-    peak_rank: string | null;
-    is_competitive: boolean;
-    created_at: string;
-    updated_at: string;
-    game: Game;
-    user: User;
 }
 
 export interface UserGameStats {
@@ -44,24 +25,10 @@ export interface AuthResponse {
     user: User;
 }
 
-export interface ImportStatus {
-    [key: number]: {
-        status: 'pending' | 'importing' | 'success' | 'error';
-        error?: string;
-    };
-}
-
-export interface ImportProgress {
-    stage: 'fetching' | 'matching' | 'importing' | 'complete';
-    current: number;
-    total: number;
-    message: string;
-}
-
 export interface AuthContextType {
     user: User | null;
     token: string | null;
     loading: boolean;
     login: (token: string, user: User) => void;
     logout: () => void;
-}
+} 
