@@ -12,6 +12,51 @@ import '../animations.css';
 
 type SortField = 'name' | 'status' | 'year' | 'last_played_at' | 'playtime_minutes';
 
+interface GameProgress {
+    game: Game;
+    status: game_status;
+    playtime_minutes: number;
+    completion_percentage: number;
+    last_played_at: string | null;
+    notes: string;
+    current_rank: string;
+    peak_rank: string;
+    is_favorite: boolean;
+}
+
+interface GameProgressData {
+    game_progress: GameProgress[];
+}
+
+interface ExtendedSortButtonProps extends SortButtonProps {
+    sortConfig: SortConfig;
+    onSort: (field: SortField) => void;
+}
+
+const SortButton = React.memo<ExtendedSortButtonProps>(({field, label, sortConfig, onSort}) => (
+    <button
+        onClick={() => onSort(field)}
+        className={`
+            px-4 py-2 rounded-lg font-medium
+            ${sortConfig.field === field
+            ? 'bg-indigo-600 text-white shadow-lg hover:bg-indigo-700' 
+            : 'bg-[#171a21] hover:text-white text-gray-300 hover:bg-[#2a475e]'
+        } 
+            transition-all duration-200 flex items-center gap-2
+            active:scale-95
+        `}
+    >
+        {label}
+        {sortConfig.field === field && (
+            <span className="text-lg">
+                {sortConfig.order === 'asc' ? '↑' : '↓'}
+            </span>
+        )}
+    </button>
+));
+
+SortButton.displayName = 'SortButton';
+
 const GameCollection: React.FC = () => {
     const {user} = useAuth();
     const [sortConfig, setSortConfig] = useState<SortConfig>(() => {
@@ -47,7 +92,7 @@ const GameCollection: React.FC = () => {
     const [deleteGame] = useMutation(DELETE_GAME, {
         update(cache, {data: {delete_game_progress}}) {
             try {
-                const existingData = cache.readQuery<{ game_progress: any[] }>({
+                const existingData = cache.readQuery<{ game_progress: { game: { id: string } }[] }>({
                     query: GET_DATA,
                     variables: {
                         userId: user?.id,
@@ -78,7 +123,7 @@ const GameCollection: React.FC = () => {
 
     const [updateGameStatus] = useMutation(UPDATE_GAME_STATUS, {
         update(cache, {data: {update_game_progress}}) {
-            const existingData = cache.readQuery<{ game_progress: any[] }>({
+            const existingData = cache.readQuery<GameProgressData>({
                 query: GET_DATA,
                 variables: {
                     userId: user?.id,
@@ -149,31 +194,9 @@ const GameCollection: React.FC = () => {
         }
     };
 
-    const SortButton = React.memo<SortButtonProps>(({field, label}) => (
-        <button
-            onClick={() => handleSort(field)}
-            className={`
-                px-4 py-2 rounded-lg font-medium
-                ${sortConfig.field === field
-                ? 'bg-indigo-600 text-white shadow-lg hover:bg-indigo-700' 
-                : 'bg-[#171a21] hover:text-white text-gray-300 hover:bg-[#2a475e]'
-            } 
-                transition-all duration-200 flex items-center gap-2
-                active:scale-95
-            `}
-        >
-            {label}
-            {sortConfig.field === field && (
-                <span className="text-lg">
-                    {sortConfig.order === 'asc' ? '↑' : '↓'}
-                </span>
-            )}
-        </button>
-    ));
-
     const games = React.useMemo(() => {
         const gameProgressList = data?.game_progress || [];
-        return gameProgressList.map((progress: any) => ({
+        return gameProgressList.map((progress: GameProgress) => ({
             ...progress.game,
             status: progress.status,
             playtime_minutes: progress.playtime_minutes,
@@ -256,11 +279,11 @@ const GameCollection: React.FC = () => {
     return (
         <div className="space-y-6 bg-dark p-8 rounded-lg">
             <div className="flex flex-wrap gap-4 items-center bg-dark-light p-2 rounded-lg">
-                <SortButton field="name" label="Name" />
-                <SortButton field="status" label="Status" />
-                <SortButton field="year" label="Year" />
-                <SortButton field="last_played_at" label="Last Played" />
-                <SortButton field="playtime_minutes" label="Playtime" />
+                <SortButton field="name" label="Name" sortConfig={sortConfig} onSort={handleSort} />
+                <SortButton field="status" label="Status" sortConfig={sortConfig} onSort={handleSort} />
+                <SortButton field="year" label="Year" sortConfig={sortConfig} onSort={handleSort} />
+                <SortButton field="last_played_at" label="Last Played" sortConfig={sortConfig} onSort={handleSort} />
+                <SortButton field="playtime_minutes" label="Playtime" sortConfig={sortConfig} onSort={handleSort} />
                 
                 <div className="ml-auto flex gap-4 items-center">
                     <button

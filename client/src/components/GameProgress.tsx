@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation } from '@apollo/client';
-import { UPDATE_GAME_PROGRESS } from '../queries/user';
+import { UPDATE_USER_GAME_PROGRESS } from '../queries/user';
 import { GameProgressProps } from '../types/props';
 
 const GameProgress: React.FC<GameProgressProps> = ({ game, progress, userId }) => {
@@ -9,7 +9,7 @@ const GameProgress: React.FC<GameProgressProps> = ({ game, progress, userId }) =
     const [completion, setCompletion] = useState(progress?.completion_percentage || 0);
     const [notes, setNotes] = useState(progress?.notes || '');
 
-    const [updateProgress] = useMutation(UPDATE_GAME_PROGRESS, {
+    const [updateProgress] = useMutation(UPDATE_USER_GAME_PROGRESS, {
         onCompleted: () => setIsEditing(false)
     });
 

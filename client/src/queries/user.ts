@@ -32,8 +32,8 @@ export const GET_USER_GAME_PROGRESS = gql`
     }
 `;
 
-export const UPDATE_GAME_PROGRESS = gql`
-    mutation UpdateGameProgress(
+export const UPDATE_USER_GAME_PROGRESS = gql`
+    mutation UpdateUserGameProgress(
         $userId: Int!,
         $gameId: Int!,
         $playtime: Int!,
@@ -67,7 +67,7 @@ export const GET_USER_STATS = gql`
     query GetUserStats($userId: Int!) {
         users_by_pk(id: $userId) {
             id
-            game_progress_aggregate {
+            game_progresses_aggregate {
                 aggregate {
                     count
                     avg {
@@ -76,10 +76,10 @@ export const GET_USER_STATS = gql`
                     }
                 }
             }
-            game_progress(where: { game: { status: { _eq: "COMPLETED" } } }) {
+            completed: game_progresses(where: { game: { status: { _eq: "COMPLETED" } } }) {
                 id
             }
-            game_progress(where: { game: { status: { _eq: "IN_PROGRESS" } } }) {
+            in_progress: game_progresses(where: { game: { status: { _eq: "IN_PROGRESS" } } }) {
                 id
             }
         }
