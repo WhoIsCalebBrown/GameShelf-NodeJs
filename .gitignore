@@ -6,3 +6,5 @@ node_modules
 .idea/inspectionProfiles/Project_Default.xml
 .idea/vcs.xml
 .idea/.gitignore
+eslint.config.mjs
+client/apollo.config.js
