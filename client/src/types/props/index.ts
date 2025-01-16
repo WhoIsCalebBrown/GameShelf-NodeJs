@@ -11,6 +11,11 @@ export interface GameCardProps {
     onDelete?: () => void;
 }
 
+export interface GameSearchCardProps {
+    game: IGDBGame;
+    onAddGame: (game: IGDBGame) => Promise<void>;
+}
+
 export interface GameProgressProps {
     game: Game;
     progress?: GameProgress;

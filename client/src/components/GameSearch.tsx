@@ -3,16 +3,11 @@ import { searchgames, getTrendinggames } from '../services/igdb';
 import { useMutation, useApolloClient } from '@apollo/client';
 import { CREATE_GAME, CREATE_GAME_PROGRESS, GET_GAME_COLLECTION, CHECK_GAME_PROGRESS } from '../gql';
 import { IGDBGame, GameProgressData } from '../types';
-import { GameSearchProps } from '../types';
+import { GameSearchProps, GameSearchCardProps } from '../types/props';
 import { useAuth } from '../context/AuthContext';
 import GameAddNotification from './GameAddNotification';
 
-interface GameCardProps {
-    game: IGDBGame;
-    onAddGame: (game: IGDBGame) => Promise<void>;
-}
-
-const GameCard: React.FC<GameCardProps> = ({ game, onAddGame }) => {
+const GameCard: React.FC<GameSearchCardProps> = ({ game, onAddGame }) => {
     const [isExpanded, setIsExpanded] = useState(false);
 
     const getDeveloper = () => {
