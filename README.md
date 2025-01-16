@@ -1,33 +1,19 @@
 # 🎮 GameShelf
 
-A modern web application to track your video game collection, progress, and competitive stats.
+GameShelf is a modern web application for tracking your video game collection, progress, and gaming achievements. Built with React, TypeScript, and GraphQL, it offers a seamless way to manage your gaming library.
 
 ## ✨ Features
 
-### 📚 Game Collection Management
-- 🔍 Search and add games from IGDB database
-- 📊 Track game status:
-  - 🆕 Not Started
-  - ▶️ In Progress
-  - ✅ Completed
-  - ⏸️ On Hold
-  - 🛑 Dropped
-  - 💫 Want to Play
-- 🔥 View trending games
-- 🗑️ Delete games from collection
+- 📚 **Game Collection Management**: Track and organize your video games
+- 📈 **Progress Tracking**: Monitor completion rates, playtime, and gaming status
+- 🎮 **Steam Integration**: Import your Steam library automatically
+- 🏆 **Competitive Game Stats**: Track ranks and competitive progress
+- 🎯 **Rich Game Details**: View comprehensive game information from IGDB
+- 📱 **Responsive Design**: Modern UI that works on desktop and mobile
 
-### 📈 Progress Tracking
-- ⏱️ Track playtime (hours and minutes)
-- 📊 Track completion percentage
-- 📝 Add personal notes
-- 📅 Record last played date
+### 🎖️ Supported Ranking Systems
 
-### 🏆 Competitive Game Features
-- 🎯 Toggle games as competitive
-- 🏅 Track current and peak ranks
-- 🎮 Supports various ranking systems:
-
-#### 🎖️ Standard Ranks
+#### 📊 Standard Ranks
 - Iron
 - Bronze (br)
 - Silver (silv)
@@ -52,7 +38,6 @@ A modern web application to track your video game collection, progress, and comp
 - Master (3500-3999 SR)
 - Grandmaster (4000-4899 SR)
 - Top 500 (4900+ SR)
-- Supports shorthand: "t500", "top500"
 
 #### 📊 Letter Grade System
 - S/S+ (Gold)
@@ -62,50 +47,55 @@ A modern web application to track your video game collection, progress, and comp
 - D/D+ (Green)
 - F (Gray)
 
-## 🚀 Setup
-
-1. Clone the repository
-```bash
-git clone https://github.com/yourusername/GameShelf-NodeJS.git
-cd GameShelf-NodeJS
-```
-
-2. Install dependencies
-```bash
-# Install server dependencies
-cd server
-npm install
-cd ../
-# Install client dependencies
-cd client
-npm install
-cd ../
-```
-
-3. Set up environment variables
-Create a `.env` file in the root directory with:
-```env
-IGDB_CLIENT_ID=your_igdb_client_id
-IGDB_CLIENT_SECRET=your_igdb_client_secret
-HASURA_ADMIN_SECRET=your_hasura_admin_secret
-```
-
-4. Start the development servers and the client
-```bash
-# Start the Node.js server
-npm run dev
-
 ## 🛠️ Tech Stack
-- 🌐 Frontend: React with TypeScript
-- 🖥️ Backend: Node.js
-- 💾 Database: PostgreSQL with Hasura GraphQL
+
+- 🌐 Frontend: React + TypeScript
+- 🎨 Styling: TailwindCSS
+- 💾 State Management: Apollo Client
+- 📡 API: GraphQL with Hasura
+- 🔒 Authentication: Custom auth system
 - 🎮 Game Data: IGDB API
-- 🎨 Styling: Tailwind CSS
+- 🚂 Steam Integration: Steam Web API
+
+## 🚀 Getting Started
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/GameShelf-NodeJS.git
+   cd GameShelf-NodeJS
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Set up environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+   Fill in your API keys and configuration values.
+
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+## ⚙️ Environment Variables
+
+- `VITE_HASURA_GRAPHQL_URL`: Your Hasura GraphQL endpoint
+- `VITE_HASURA_ADMIN_SECRET`: Hasura admin secret
+- `VITE_IGDB_CLIENT_ID`: IGDB API client ID
+- `VITE_IGDB_ACCESS_TOKEN`: IGDB API access token
 
 ## 🤝 Contributing
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
-## 🙏 Acknowledgments
-- [IGDB](https://www.igdb.com/) for their comprehensive video game database
-- [Hasura](https://hasura.io/) for the GraphQL engine
-- [TailwindCSS](https://tailwindcss.com/) for the styling system
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
