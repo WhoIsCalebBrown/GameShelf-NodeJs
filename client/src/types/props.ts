@@ -15,6 +15,12 @@ export interface GameProgressProps {
     userId: number;
 }
 
+export interface GameUpdates {
+    name?: string;
+    description?: string;
+    year?: number;
+}
+
 export interface EditGameModalProps {
     game: {
         id: number;
@@ -23,7 +29,7 @@ export interface EditGameModalProps {
         year?: number;
     };
     onClose: () => void;
-    onSave: (id: number, updates: any) => void;
+    onSave: (id: number, updates: GameUpdates) => void;
 }
 
 export interface DropdownMenuProps {

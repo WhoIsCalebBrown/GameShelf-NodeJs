@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation } from '@apollo/client';
 import { UPDATE_GAME_PROGRESS_STATUS, UPDATE_GAME_PROGRESS, UPDATE_GAME_COMPETITIVE_STATUS, UPDATE_GAME_PROGRESS_FAVORITE } from '../queries';
-import { game_status } from '../types/game';
+import { game_status, GameProgressRef } from '../types/game';
 import { GameCardProps, DropdownMenuProps } from '../types/props';
 import { useAuth } from '../context/AuthContext';
 import { getRankColor, getPeakRankColor } from '../utils/rankColors';
@@ -60,7 +60,7 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({ onDelete, onEdit }) => {
     );
 };
 
-const GameCard: React.FC<GameCardProps> = ({ game, actions, onStatusChange, onDelete }) => {
+const GameCard: React.FC<GameCardProps> = ({ game, onDelete }) => {
     const { user } = useAuth();
     const [localStatus, setLocalStatus] = useState<game_status | undefined>(game.status);
     const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
@@ -91,7 +91,7 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions, onStatusChange, onDe
                 cache.modify({
                     fields: {
                         game_progress(existingGames = [], { readField }) {
-                            return existingGames.map((gameRef: any) => {
+                            return existingGames.map((gameRef: GameProgressRef) => {
                                 const gameId = readField('game_id', gameRef) || readField('id', readField('game', gameRef));
                                 if (gameId === game.id) {
                                     return {
@@ -132,7 +132,7 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions, onStatusChange, onDe
                 cache.modify({
                     fields: {
                         game_progress(existingGames = [], { readField }) {
-                            return existingGames.map((gameRef: any) => {
+                            return existingGames.map((gameRef: GameProgressRef) => {
                                 const gameId = readField('game_id', gameRef) || readField('id', readField('game', gameRef));
                                 if (gameId === game.id) {
                                     return {
@@ -168,7 +168,7 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions, onStatusChange, onDe
                 cache.modify({
                     fields: {
                         game_progress(existingGames = [], { readField, toReference }) {
-                            return existingGames.map((gameRef: any) => {
+                            return existingGames.map((gameRef: GameProgressRef) => {
                                 const gameId = readField('game_id', gameRef) || readField('id', readField('game', gameRef));
                                 if (gameId === game.id) {
                                     const gameField = readField('game', gameRef) as {
@@ -216,7 +216,7 @@ const GameCard: React.FC<GameCardProps> = ({ game, actions, onStatusChange, onDe
                 cache.modify({
                     fields: {
                         game_progress(existingGames = [], { readField }) {
-                            return existingGames.map((gameRef: any) => {
+                            return existingGames.map((gameRef: GameProgressRef) => {
                                 const gameId = readField('game_id', gameRef) || readField('id', readField('game', gameRef));
                                 if (gameId === game.id) {
                                     return {

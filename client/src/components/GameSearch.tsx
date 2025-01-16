@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { searchgames, getTrendinggames } from '../services/igdb';
 import { useMutation } from '@apollo/client';
 import { CREATE_GAME, CREATE_GAME_PROGRESS, GET_GAME_COLLECTION } from '../queries';
-import { IGDBGame } from '../types/game';
+import { IGDBGame, GameProgressData } from '../types/game';
 import { GameSearchProps } from '../types/props';
 import { useAuth } from '../context/AuthContext';
 
@@ -173,7 +173,7 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
     const [addGame] = useMutation(CREATE_GAME);
     const [addGameProgress] = useMutation(CREATE_GAME_PROGRESS, {
         update(cache, { data: { insert_game_progress_one } }) {
-            const existingData = cache.readQuery<{ game_progress: any[] }>({
+            const existingData = cache.readQuery<GameProgressData>({
                 query: GET_GAME_COLLECTION,
                 variables: { 
                     userId: user?.id,
