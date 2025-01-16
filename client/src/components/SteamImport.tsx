@@ -2,7 +2,7 @@ import React, {useState, useEffect, useCallback} from 'react';
 import {useAuth} from '../context/AuthContext';
 import {importSteamLibrary} from '../services/steam';
 import {useMutation} from '@apollo/client';
-import {CREATE_BULK_GAMES, CREATE_BULK_GAME_PROGRESSES, GET_GAME_COLLECTION} from '../queries';
+import {CREATE_BULK_GAMES, CREATE_BULK_GAME_PROGRESSES, GET_GAME_COLLECTION} from '../gql';
 
 interface SteamImportProps {
     autoImport?: boolean;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation } from '@apollo/client';
-import { ADD_GAME, GET_DATA } from '../queries/queries.ts';
+import { ADD_GAME, GET_DATA } from '../gql/queries.ts';
 
 interface AddGameFormProps {
   onSuccess?: () => void;

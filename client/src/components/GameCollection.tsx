@@ -1,6 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import {useQuery, useMutation, NetworkStatus} from '@apollo/client';
-import {GET_GAME_COLLECTION, DELETE_GAME_PROGRESS, UPDATE_GAME_PROGRESS_STATUS} from '../queries';
+import {GET_GAME_COLLECTION, DELETE_GAME_PROGRESS, UPDATE_GAME_PROGRESS_STATUS} from '../gql';
 import GameCard from './GameCard';
 import {Game, game_status} from '../types/game';
 import {SortConfig} from '../types/api';

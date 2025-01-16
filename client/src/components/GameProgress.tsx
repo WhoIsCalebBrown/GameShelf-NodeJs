@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation } from '@apollo/client';
-import { UPDATE_USER_GAME_PROGRESS } from '../queries/user';
+import { UPDATE_USER_GAME_PROGRESS } from '../gql/user';
 import { GameProgressProps } from '../types/props';
 
 const GameProgress: React.FC<GameProgressProps> = ({ game, progress, userId }) => {

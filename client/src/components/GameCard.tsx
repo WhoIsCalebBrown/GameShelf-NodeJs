@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation } from '@apollo/client';
-import { UPDATE_GAME_PROGRESS_STATUS, UPDATE_GAME_PROGRESS, UPDATE_GAME_COMPETITIVE_STATUS, UPDATE_GAME_PROGRESS_FAVORITE } from '../queries';
+import { UPDATE_GAME_PROGRESS_STATUS, UPDATE_GAME_PROGRESS, UPDATE_GAME_COMPETITIVE_STATUS, UPDATE_GAME_PROGRESS_FAVORITE } from '../gql';
 import { game_status, GameProgressRef } from '../types/game';
 import { GameCardProps, DropdownMenuProps } from '../types/props';
 import { useAuth } from '../context/AuthContext';

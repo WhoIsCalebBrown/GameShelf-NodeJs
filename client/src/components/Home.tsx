@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@apollo/client';
-import { GET_GAME_COLLECTION } from '../queries';
+import { GET_GAME_COLLECTION } from '../gql';
 import { game_status, game_status_labels } from '../types/game';
 import { useAuth } from '../context/AuthContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';

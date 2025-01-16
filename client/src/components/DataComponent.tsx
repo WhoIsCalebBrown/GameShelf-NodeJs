@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@apollo/client';
-import { GET_DATA, UPDATE_GAME_STATUS } from '../queries/queries.ts';
+import { GET_DATA, UPDATE_GAME_STATUS } from '../gql/queries.ts';
 import { useAuth } from '../context/AuthContext.tsx';
 import { game_status } from '../types/game.ts';
 

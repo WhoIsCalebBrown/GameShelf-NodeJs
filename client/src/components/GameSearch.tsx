@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { searchgames, getTrendinggames } from '../services/igdb';
 import { useMutation } from '@apollo/client';
-import { CREATE_GAME, CREATE_GAME_PROGRESS, GET_GAME_COLLECTION } from '../queries';
+import { CREATE_GAME, CREATE_GAME_PROGRESS, GET_GAME_COLLECTION } from '../gql';
 import { IGDBGame, GameProgressData } from '../types/game';
 import { GameSearchProps } from '../types/props';
 import { useAuth } from '../context/AuthContext';
