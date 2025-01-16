@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { searchgames, getTrendinggames } from '../services/igdb';
 import { useMutation, useApolloClient } from '@apollo/client';
 import { CREATE_GAME, CREATE_GAME_PROGRESS, GET_GAME_COLLECTION, CHECK_GAME_PROGRESS } from '../gql';
@@ -153,6 +153,32 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
     const [ratingRange, setRatingRange] = useState({ min: 0, max: 100 });
     const [selectedGenres, setSelectedGenres] = useState<number[]>([]);
     const [selectedPlatforms, setSelectedPlatforms] = useState<number[]>([]);
+
+    const uniqueGenres = useMemo(() => {
+        if (!searchResults.length) return [];
+        const genreMap = new Map();
+        searchResults.forEach(game => {
+            game.genres?.forEach(genre => {
+                if (!genreMap.has(genre.id)) {
+                    genreMap.set(genre.id, genre);
+                }
+            });
+        });
+        return Array.from(genreMap.values());
+    }, [searchResults]);
+
+    const uniquePlatforms = useMemo(() => {
+        if (!searchResults.length) return [];
+        const platformMap = new Map();
+        searchResults.forEach(game => {
+            game.platforms?.forEach(platform => {
+                if (!platformMap.has(platform.id)) {
+                    platformMap.set(platform.id, platform);
+                }
+            });
+        });
+        return Array.from(platformMap.values());
+    }, [searchResults]);
 
     useEffect(() => {
         const loadTrendinggames = async () => {
@@ -418,7 +444,7 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-400">Genres</label>
                                     <div className="flex flex-wrap gap-2">
-                                        {Array.from(new Set(searchResults.flatMap(game => game.genres || []))).map(genre => (
+                                        {uniqueGenres.map(genre => (
                                             <button
                                                 key={genre.id}
                                                 onClick={() => {
@@ -446,7 +472,7 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-400">Platforms</label>
                                     <div className="flex flex-wrap gap-2">
-                                        {Array.from(new Set(searchResults.flatMap(game => game.platforms || []))).map(platform => (
+                                        {uniquePlatforms.map(platform => (
                                             <button
                                                 key={platform.id}
                                                 onClick={() => {

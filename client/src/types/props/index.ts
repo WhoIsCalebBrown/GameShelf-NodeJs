@@ -2,6 +2,7 @@ import { Game } from '../models/Game';
 import { GameProgress } from '../models/GameProgress';
 import { GameStatus } from '../enums/gameStatus';
 import { IGDBGame } from '../models/Game';
+import { SortConfig } from '../api/requests';
 import React from 'react';
 
 export interface GameCardProps {
@@ -70,4 +71,14 @@ export interface GameAddNotificationProps {
     game: IGDBGame | null;
     status: 'adding' | 'success' | 'exists' | null;
     onClose: () => void;
+}
+
+export interface GameCollectionHeaderProps {
+    searchTerm: string;
+    setSearchTerm: (term: string) => void;
+    sortConfig: SortConfig;
+    onSort: (field: 'name' | 'status' | 'year' | 'last_played_at' | 'playtime_minutes') => void;
+    groupUnplayed: boolean;
+    setGroupUnplayed: (value: boolean) => void;
+    onSteamImport: () => void;
 }
