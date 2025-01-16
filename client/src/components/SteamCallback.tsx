@@ -43,14 +43,12 @@ const SteamCallback: React.FC = () => {
                 // Add Hasura claims
                 'https://hasura.io/jwt/claims': tokenData['https://hasura.io/jwt/claims']
             };
-       
 
             if (user.username && !user.username.startsWith('steam_')) {
                 login(token, user);
                 navigate('/collection');
                 return;
             }
-          
             setInitialUser(user);
             setAuthToken(token);
         } catch (error) {

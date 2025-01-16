@@ -34,6 +34,7 @@ export interface DropdownMenuProps {
 export interface SortButtonProps {
     field: 'name' | 'status' | 'year' | 'last_played_at' | 'playtime_minutes';
     label: string;
+    className?: string;
 }
 
 export interface ProtectedRouteProps {
