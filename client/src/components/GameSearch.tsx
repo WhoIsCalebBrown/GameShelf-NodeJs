@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { searchgames, getTrendinggames } from '../services/igdb';
-import { useMutation } from '@apollo/client';
-import { CREATE_GAME, CREATE_GAME_PROGRESS, GET_GAME_COLLECTION } from '../gql';
+import { useMutation, useApolloClient } from '@apollo/client';
+import { CREATE_GAME, CREATE_GAME_PROGRESS, GET_GAME_COLLECTION, CHECK_GAME_PROGRESS } from '../gql';
 import { IGDBGame, GameProgressData } from '../types';
 import { GameSearchProps } from '../types';
 import { useAuth } from '../context/AuthContext';
+import GameAddNotification from './GameAddNotification';
 
 interface GameCardProps {
     game: IGDBGame;
@@ -139,6 +140,7 @@ const GameCard: React.FC<GameCardProps> = ({ game, onAddGame }) => {
 };
 
 const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
+    const client = useApolloClient();
     const { user } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
     const [unfilteredResults, setUnfilteredResults] = useState<IGDBGame[]>([]);
@@ -147,17 +149,8 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [isTrendingLoading, setIsTrendingLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-    // Clear success message after 3 seconds
-    useEffect(() => {
-        if (successMessage) {
-            const timer = setTimeout(() => {
-                setSuccessMessage(null);
-            }, 3000);
-            return () => clearTimeout(timer);
-        }
-    }, [successMessage]);
+    const [addingGame, setAddingGame] = useState<IGDBGame | null>(null);
+    const [addStatus, setAddStatus] = useState<'adding' | 'success' | 'exists' | null>(null);
 
     // Advanced filter states
     const [showFilters, setShowFilters] = useState(false);
@@ -208,7 +201,6 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
                     }
                 });
             }
-            setSuccessMessage(`${insert_game_progress_one.game.name} has been added to your collection!`);
         },
         onError: (error) => {
             setError(`Failed to add game progress: ${error.message}`);
@@ -268,64 +260,87 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
     };
 
     const handleAddGame = async (game: IGDBGame) => {
-        if (!user) {
-            setError('Please sign in to add games to your collection');
-            return;
-        }
-
+        if (!user?.id) return;
+        
+        setAddingGame(game);
+        setAddStatus('adding');
+        
         try {
-            const result = await addGame({
+            const { data: gameData } = await addGame({
                 variables: {
                     name: game.name,
                     description: game.summary,
                     year: game.first_release_date ? new Date(game.first_release_date * 1000).getFullYear() : null,
-                    igdb_id: game.id,
+                    cover_url: game.cover?.url.replace('t_thumb', 't_cover_big'),
                     slug: game.slug,
-                    cover_url: game.cover?.url
+                    igdb_id: game.id
                 }
             });
 
-            if (result.data?.insert_games_one) {
-                await addGameProgress({
-                    variables: {
-                        userId: user.id,
-                        gameId: result.data.insert_games_one.id
-                    }
-                });
+            // Check if the game exists in the user's game_progress
+            const { data: progressData } = await client.query({
+                query: CHECK_GAME_PROGRESS,
+                variables: { 
+                    userId: user.id,
+                    gameId: gameData.insert_games_one.id
+                },
+                fetchPolicy: 'network-only' // Force a fresh check from the server
+            });
 
-                if (onGameSelect) {
-                    onGameSelect(result.data.insert_games_one);
+            if (progressData.game_progress.length > 0) {
+                setAddStatus('exists');
+                return;
+            }
+
+            await addGameProgress({
+                variables: {
+                    userId: user.id,
+                    gameId: gameData.insert_games_one.id,
+                    status: 'not_started'
                 }
+            });
+
+            setAddStatus('success');
+            if (onGameSelect) {
+                onGameSelect(gameData.insert_games_one);
             }
         } catch (error) {
             console.error('Error adding game:', error);
-            setError(`Failed to add game: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            setError(`Failed to add game: ${error.message}`);
+            setAddingGame(null);
+            setAddStatus(null);
         }
     };
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-6">
+            {error && (
+                <div className="bg-red-500/10 text-red-500 p-4 rounded-lg">
+                    {error}
+                </div>
+            )}
+
             {/* Search Section */}
-        <div className="bg-dark rounded-lg p-6 shadow-lg">
+            <div className="bg-dark rounded-lg p-6 shadow-lg">
                 <div className="space-y-4">
                     {/* Search input and button */}
                     <div className="flex gap-4">
                         <div className="flex-1 flex gap-4">
-                <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                    placeholder="Search for games..."
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                                placeholder="Search for games..."
                                 className="form-input flex-1 bg-dark-light border-gray-700 focus:border-primary-500 focus:ring-primary-500"
-                />
-                <button 
-                    onClick={handleSearch}
-                    disabled={isLoading}
+                            />
+                            <button 
+                                onClick={handleSearch}
+                                disabled={isLoading}
                                 className="btn bg-primary-500 hover:bg-primary-600 transition-colors disabled:opacity-50 min-w-[100px]"
-                >
-                    {isLoading ? 'Searching...' : 'Search'}
-                </button>
+                            >
+                                {isLoading ? 'Searching...' : 'Search'}
+                            </button>
                         </div>
                         <button
                             onClick={() => setShowFilters(!showFilters)}
@@ -401,7 +416,7 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
                                         className="form-input w-24 bg-dark border-gray-700"
                                     />
                                 </div>
-            </div>
+                            </div>
 
                             {/* Genre Filter */}
                             {searchResults.length > 0 && (
@@ -428,8 +443,8 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
                                             </button>
                                         ))}
                                     </div>
-                </div>
-            )}
+                                </div>
+                            )}
 
                             {/* Platform Filter */}
                             {searchResults.length > 0 && (
@@ -480,11 +495,6 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
                         {error}
                     </div>
                 )}
-                {successMessage && (
-                    <div className="bg-green-500/10 text-green-500 p-4 rounded-lg">
-                        {successMessage}
-                    </div>
-                )}
 
                 {/* Search Results */}
                 {searchResults.length > 0 && (
@@ -523,6 +533,15 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
                     </div>
                 )}
             </div>
+
+            <GameAddNotification
+                game={addingGame}
+                status={addStatus}
+                onClose={() => {
+                    setAddingGame(null);
+                    setAddStatus(null);
+                }}
+            />
         </div>
     );
 };

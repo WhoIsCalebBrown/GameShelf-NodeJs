@@ -31,6 +31,17 @@ export const GET_GAME_COLLECTION = gql`
     }
 `;
 
+export const CHECK_GAME_PROGRESS = gql`
+    query CheckGameProgress($userId: Int!, $gameId: Int!) {
+        game_progress(where: {
+            user_id: { _eq: $userId },
+            game_id: { _eq: $gameId }
+        }) {
+            id
+        }
+    }
+`;
+
 export const CREATE_GAME_PROGRESS = gql`
     mutation CreateGameProgress(
         $userId: Int!,

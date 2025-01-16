@@ -1,6 +1,7 @@
 import { Game } from '../models/Game';
 import { GameProgress } from '../models/GameProgress';
 import { GameStatus } from '../enums/gameStatus';
+import { IGDBGame } from '../models/Game';
 import React from 'react';
 
 export interface GameCardProps {
@@ -59,3 +60,9 @@ export interface GameSearchProps {
 export interface GameStatsProps {
     games: Game[];
 } 
+
+export interface GameAddNotificationProps {
+    game: IGDBGame | null;
+    status: 'adding' | 'success' | 'exists' | null;
+    onClose: () => void;
+}
