@@ -8,3 +8,4 @@ node_modules
 .idea/.gitignore
 eslint.config.mjs
 client/apollo.config.js
+/hasura

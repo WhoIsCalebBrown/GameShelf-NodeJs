@@ -1,39 +1,4 @@
-interface IGDBGame {
-    id: number;
-    name: string;
-    summary: string;
-    first_release_date?: number;
-    cover?: {
-        url: string;
-    };
-    slug: string;
-    rating?: number;
-    total_rating?: number;
-    game_modes?: Array<{
-        id: number;
-        name: string;
-    }>;
-    genres?: Array<{
-        id: number;
-        name: string;
-    }>;
-    platforms?: Array<{
-        id: number;
-        name: string;
-    }>;
-    themes?: Array<{
-        id: number;
-        name: string;
-    }>;
-    involved_companies?: Array<{
-        company: {
-            id: number;
-            name: string;
-        };
-        developer: boolean;
-        publisher: boolean;
-    }>;
-}
+import { IGDBGame } from '../types/models/Game';
 
 export const searchgames = async (searchTerm: string): Promise<IGDBGame[]> => {
     try {

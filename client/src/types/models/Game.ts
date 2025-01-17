@@ -29,11 +29,22 @@ export interface IGDBGame {
     };
     total_rating?: number;
     slug: string;
+    rating?: number;
+    rating_count?: number;
+    total_rating_count?: number;
     genres?: Array<{
         id: number;
         name: string;
     }>;
     platforms?: Array<{
+        id: number;
+        name: string;
+    }>;
+    themes?: Array<{
+        id: number;
+        name: string;
+    }>;
+    game_modes?: Array<{
         id: number;
         name: string;
     }>;
@@ -43,6 +54,85 @@ export interface IGDBGame {
         };
         developer: boolean;
         publisher: boolean;
+    }>;
+    aggregated_rating?: number;
+    aggregated_rating_count?: number;
+    category?: number;
+    storyline?: string;
+    version_title?: string;
+    version_parent?: number;
+    franchise?: string;
+    franchise_id?: number;
+    hypes?: number;
+    follows?: number;
+    total_follows?: number;
+    url?: string;
+    game_engines?: Array<{
+        id: number;
+        name: string;
+    }>;
+    alternative_names?: Array<{
+        id: number;
+        name: string;
+    }>;
+    collection?: {
+        id: number;
+        name: string;
+    };
+    dlcs?: Array<{
+        id: number;
+        name: string;
+    }>;
+    expansions?: Array<{
+        id: number;
+        name: string;
+    }>;
+    parent_game?: number;
+    game_bundle?: boolean;
+    multiplayer_modes?: Array<{
+        id: number;
+        name: string;
+    }>;
+    release_dates?: Array<{
+        id: number;
+        date: number;
+        platform: {
+            id: number;
+            name: string;
+        };
+    }>;
+    screenshots?: Array<{
+        id: number;
+        url: string;
+    }>;
+    similar_games?: Array<{
+        id: number;
+        name: string;
+    }>;
+    videos?: Array<{
+        id: number;
+        name: string;
+        video_id: string;
+    }>;
+    websites?: Array<{
+        id: number;
+        url: string;
+        category: number;
+    }>;
+    player_perspectives?: Array<{
+        id: number;
+        name: string;
+    }>;
+    language_supports?: Array<{
+        id: number;
+        language: {
+            id: number;
+            name: string;
+        };
+        support_type: {
+            id: number;
+            name: string;
+        };
     }>;
 }
 
