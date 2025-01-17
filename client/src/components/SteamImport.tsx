@@ -23,6 +23,7 @@ const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSte
     const [matchStats, setMatchStats] = useState<{matched: number, total: number}>({ matched: 0, total: 0 });
     const [currentStatus, setCurrentStatus] = useState<string>('');
     const [matchingStatus, setMatchingStatus] = useState<string>('');
+    const [importStatus, setImportStatus] = useState<string>('');
 
     const [bulkAddGames] = useMutation(CREATE_BULK_GAMES);
     const [bulkAddGameProgress] = useMutation(CREATE_BULK_GAME_PROGRESSES, {
@@ -99,7 +100,7 @@ const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSte
 
         setError(null);
         setIsImporting(true);
-        setImportProgress({current: 0, total: selectedGames.size});
+        setImportStatus('Preparing games for import...');
 
         try {
             // Filter selected games
@@ -109,6 +110,8 @@ const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSte
             const uniqueGames = Array.from(
                 new Map(gamesToImport.map(game => [game.igdb_id, game])).values()
             );
+            
+            setImportStatus(`Importing ${uniqueGames.length} games to database...`);
             
             // Prepare games data for bulk insert
             const gamesData = uniqueGames.map(game => ({
@@ -192,6 +195,8 @@ const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSte
             });
 
             if (gamesResult?.insert_games?.returning) {
+                setImportStatus('Creating game progress entries...');
+                
                 // Map IGDB IDs to inserted game IDs
                 const gameIdMap = new Map(
                     gamesResult.insert_games.returning.map(g => [g.igdb_id, g.id])
@@ -228,6 +233,8 @@ const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSte
                 // Convert map values to array for the mutation
                 const progressData = Array.from(uniqueProgressMap.values());
 
+                setImportStatus('Finalizing import...');
+                
                 // Bulk insert progress
                 await bulkAddGameProgress({
                     variables: {
@@ -235,15 +242,13 @@ const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSte
                     }
                 });
 
-                // Force a cache refresh for the game collection
-                client.cache.evict({ fieldName: 'game_progress' });
-                client.cache.gc();
-
-                setImportProgress({current: selectedGames.size, total: selectedGames.size});
+                setImportStatus('Import complete!');
+                setTimeout(() => setImportStatus(''), 2000);
             }
         } catch (error) {
             console.error('Error importing selected games:', error);
             setError('Failed to import selected games. Please try again.');
+            setImportStatus('');
         } finally {
             setIsImporting(false);
             setSelectedGames(new Set());
@@ -302,15 +307,10 @@ const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSte
                 <div className="text-red-500 mb-4">{error}</div>
             )}
             {isImporting && (
-                <div className="space-y-2">
-                    <div className="text-gray-300">
-                        Importing games... {importProgress.current}/{importProgress.total}
-                    </div>
-                    <div className="w-full h-3 bg-dark-light rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-primary-500 transition-all duration-300"
-                            style={{width: `${(importProgress.current / importProgress.total) * 100}%`}}
-                        />
+                <div className="mt-4 space-y-2">
+                    <div className="flex items-center gap-3 text-sm text-gray-400">
+                        <div className="animate-spin h-4 w-4 border-2 border-indigo-500 rounded-full border-t-transparent"></div>
+                        <span>{importStatus}</span>
                     </div>
                 </div>
             )}
@@ -328,10 +328,14 @@ const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSte
                         </div>
                         <button
                             onClick={handleImportSelected}
-                            disabled={selectedGames.size === 0}
-                            className="px-4 py-2 bg-primary-500 text-white rounded-lg disabled:opacity-50"
+                            disabled={isImporting || selectedGames.size === 0}
+                            className={`px-4 py-2 rounded-lg font-medium ${
+                                isImporting || selectedGames.size === 0
+                                    ? 'bg-gray-600 cursor-not-allowed'
+                                    : 'bg-indigo-600 hover:bg-indigo-700'
+                            } text-white transition-colors duration-200`}
                         >
-                            Import Selected ({selectedGames.size})
+                            {isImporting ? 'Importing...' : `Import Selected (${selectedGames.size})`}
                         </button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[70vh] overflow-y-auto p-2">
