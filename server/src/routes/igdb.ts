@@ -26,14 +26,16 @@ const GAME_FIELDS = `
           aggregated_rating_count,
           category,
           storyline,
-          franchises.*,
+          version_title,
+          version_parent,
+          follows,
           hypes,
           url,
           game_engines.*,
           alternative_names.*,
-          collection,
-          dlcs,
-          expansions,
+          collection.*,
+          dlcs.*,
+          expansions.*,
           parent_game,
           multiplayer_modes.*,
           release_dates.*,
@@ -42,7 +44,8 @@ const GAME_FIELDS = `
           videos.*,
           websites.*,
           player_perspectives.*,
-          language_supports.*;
+          language_supports.language.*,
+          language_supports.language_support_type.*;
 `;
 
 router.post('/search', async (req, res) => {

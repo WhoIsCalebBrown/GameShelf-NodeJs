@@ -1,28 +1,18 @@
 import React, {useState, useEffect, useCallback} from 'react';
 import {useAuth} from '../context/AuthContext';
 import {importSteamLibrary} from '../services/steam';
-import {useMutation} from '@apollo/client';
+import {useMutation, useApolloClient, gql} from '@apollo/client';
 import {CREATE_BULK_GAMES, CREATE_BULK_GAME_PROGRESSES, GET_GAME_COLLECTION} from '../gql';
+import {SteamGame} from '../types';
 
 interface SteamImportProps {
     autoImport?: boolean;
     defaultSteamId?: string;
 }
 
-interface SteamGame {
-    name: string;
-    igdb_id: number;
-    year?: number;
-    description?: string;
-    cover_url?: string;
-    slug: string;
-    playtime_minutes?: number;
-    last_played_at?: string;
-    matched?: boolean;
-}
-
 const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSteamId = ''}) => {
     const {user} = useAuth();
+    const client = useApolloClient();
     const [steamId, setSteamId] = useState(defaultSteamId);
     const [error, setError] = useState<string | null>(null);
     const [importProgress, setImportProgress] = useState({current: 0, total: 100});
@@ -47,7 +37,12 @@ const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSte
                 }
             }
         ],
-        awaitRefetchQueries: true
+        awaitRefetchQueries: true,
+        onCompleted: () => {
+            // Force a cache refresh
+            client.cache.evict({ fieldName: 'game_progress' });
+            client.cache.gc();
+        }
     });
 
     const handleFetchGames = useCallback(async () => {
@@ -103,13 +98,77 @@ const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSte
                 year: game.year || null,
                 description: game.description || 'No description available.',
                 cover_url: game.cover_url || null,
-                slug: game.slug
+                slug: game.slug,
+                rating: game.rating || null,
+                total_rating: game.total_rating || null,
+                rating_count: game.rating_count || null,
+                total_rating_count: game.total_rating_count || null,
+                genres: game.genres || null,
+                platforms: game.platforms || null,
+                themes: game.themes || null,
+                game_modes: game.game_modes || null,
+                involved_companies: game.involved_companies || null,
+                aggregated_rating: game.aggregated_rating || null,
+                aggregated_rating_count: game.aggregated_rating_count || null,
+                category: game.category || null,
+                storyline: game.storyline || null,
+                version_title: game.version_title || null,
+                version_parent: game.version_parent || null,
+                franchise: game.franchise || null,
+                franchise_id: game.franchise_id || null,
+                hypes: game.hypes || null,
+                follows: game.follows || null,
+                total_follows: game.total_follows || null,
+                url: game.url || null,
+                game_engines: game.game_engines || null,
+                alternative_names: game.alternative_names || null,
+                collection: game.collection || null,
+                dlcs: game.dlcs || null,
+                expansions: game.expansions || null,
+                parent_game: game.parent_game || null,
+                game_bundle: game.game_bundle || null,
+                multiplayer_modes: game.multiplayer_modes || null,
+                release_dates: game.release_dates || null,
+                screenshots: game.screenshots || null,
+                similar_games: game.similar_games || null,
+                videos: game.videos || null,
+                websites: game.websites || null,
+                player_perspectives: game.player_perspectives || null,
+                language_supports: game.language_supports || null
             }));
 
             // Bulk insert games
             const {data: gamesResult} = await bulkAddGames({
                 variables: {
                     games: gamesData
+                },
+                update: (cache, { data }) => {
+                    // Update games cache
+                    if (data?.insert_games?.returning) {
+                        data.insert_games.returning.forEach(game => {
+                            cache.modify({
+                                fields: {
+                                    games(existingGames = []) {
+                                        const newGameRef = cache.writeFragment({
+                                            data: game,
+                                            fragment: gql`
+                                                fragment NewGame on games {
+                                                    id
+                                                    name
+                                                    description
+                                                    year
+                                                    igdb_id
+                                                    slug
+                                                    cover_url
+                                                }
+                                            `
+                                        });
+                                        return [...existingGames, newGameRef];
+                                    }
+                                }
+                            });
+                        });
+                    }
                 }
             });
 
@@ -134,9 +193,6 @@ const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSte
                         const existingEntry = uniqueProgressMap.get(gameId);
                         const existingPlaytime = existingEntry?.playtime_minutes || 0;
 
-                        console.log(`Client - Processing game: ${game.name}`);
-                        console.log(`Last played at: ${game.last_played_at}`);
-
                         if (!existingEntry || playtimeMinutes > existingPlaytime) {
                             uniqueProgressMap.set(gameId, {
                                 user_id: user.id,
@@ -159,6 +215,10 @@ const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSte
                         progresses: progressData
                     }
                 });
+
+                // Force a cache refresh for the game collection
+                client.cache.evict({ fieldName: 'game_progress' });
+                client.cache.gc();
 
                 setImportProgress({current: selectedGames.size, total: selectedGames.size});
             }
