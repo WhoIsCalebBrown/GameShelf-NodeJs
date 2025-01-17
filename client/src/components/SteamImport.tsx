@@ -20,6 +20,9 @@ const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSte
     const [isLoading, setIsLoading] = useState(false);
     const [availableGames, setAvailableGames] = useState<SteamGame[]>([]);
     const [selectedGames, setSelectedGames] = useState<Set<number>>(new Set());
+    const [matchStats, setMatchStats] = useState<{matched: number, total: number}>({ matched: 0, total: 0 });
+    const [currentStatus, setCurrentStatus] = useState<string>('');
+    const [matchingStatus, setMatchingStatus] = useState<string>('');
 
     const [bulkAddGames] = useMutation(CREATE_BULK_GAMES);
     const [bulkAddGameProgress] = useMutation(CREATE_BULK_GAME_PROGRESSES, {
@@ -58,11 +61,27 @@ const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSte
 
         setError(null);
         setIsLoading(true);
+        setMatchStats({ matched: 0, total: 0 });
 
         try {
-            const games = await importSteamLibrary(steamId, (current, total) => {
-                setImportProgress({current, total});
-            });
+            const games = await importSteamLibrary(
+                steamId, 
+                user.id.toString(),
+                (current, total) => {
+                    setImportProgress({current, total});
+                },
+                (update) => {
+                    if (update.type === 'progress') {
+                        setImportProgress({current: update.current || 0, total: update.total || 0});
+                        setCurrentStatus(`Processing ${update.current} of ${update.total} games`);
+                    } else if (update.type === 'match') {
+                        setMatchingStatus(`Matching: ${update.game} - ${update.matched ? 'Found' : 'Not found'}`);
+                    } else if (update.type === 'complete') {
+                        setCurrentStatus(`Complete! Matched ${update.matchedCount} of ${update.totalCount} games`);
+                        setMatchingStatus('');
+                    }
+                }
+            );
             setAvailableGames(games);
         } catch (error) {
             console.error('Error fetching Steam library:', error);
@@ -361,6 +380,33 @@ const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSte
                                 </div>
                             </div>
                         ))}
+                    </div>
+                </div>
+            )}
+            {isLoading && (
+                <div className="mt-4 space-y-2">
+                    <div className="flex items-center justify-between text-sm text-gray-400">
+                        <span>Progress: {importProgress.current} / {importProgress.total}</span>
+                        {matchStats.total > 0 && (
+                            <span>Matched: {matchStats.matched} / {matchStats.total}</span>
+                        )}
+                    </div>
+                    <div className="relative h-2 bg-gray-700 rounded-full overflow-hidden">
+                        <div 
+                            className="absolute h-full bg-indigo-600 transition-all duration-300"
+                            style={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
+                        />
+                    </div>
+                    <div className="mt-4 space-y-2 text-sm text-gray-400">
+                        <div className="flex items-center gap-2">
+                            <div className="animate-spin h-4 w-4 border-2 border-indigo-500 rounded-full border-t-transparent"></div>
+                            <span>{currentStatus}</span>
+                        </div>
+                        {matchingStatus && (
+                            <div className="ml-6 text-gray-500">
+                                {matchingStatus}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

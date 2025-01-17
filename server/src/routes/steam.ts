@@ -203,7 +203,54 @@ interface MatchedGame extends SteamGame {
 interface RequestWithGames extends Request {
     body: {
         games: SteamGame[];
+        userId?: string;
     };
+}
+
+// Add a map to store SSE clients
+const clients = new Map<string, Response>();
+
+// Add the SSE endpoint
+router.get('/progress/:userId', (req, res) => {
+    const { userId } = req.params;
+
+    // Set headers for SSE
+    res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+    });
+
+    // Send initial message
+    res.write('data: {"status": "connected"}\n\n');
+
+    // Store the client
+    clients.set(userId, res);
+
+    // Remove client on connection close
+    req.on('close', () => {
+        clients.delete(userId);
+    });
+});
+
+// Add interface for progress updates
+interface ProgressUpdate {
+    type: 'progress' | 'match' | 'complete';
+    message?: string;
+    current?: number;
+    total?: number;
+    game?: string;
+    matched?: boolean;
+    matchedCount?: number;
+    totalCount?: number;
+}
+
+// Helper function to send updates to client
+function sendUpdate(userId: string, data: ProgressUpdate) {
+    const client = clients.get(userId);
+    if (client) {
+        client.write(`data: ${JSON.stringify(data)}\n\n`);
+    }
 }
 
 // Helper function to clean game names for better matching
@@ -457,34 +504,51 @@ async function searchIGDB(query: string): Promise<IGDBMatch[]> {
     }
 }
 
-// Add return type to the function
-async function matchGames(games: SteamGame[]): Promise<MatchedGame[]> {
+// Modify the matchGames function to send progress updates
+async function matchGames(games: SteamGame[], userId?: string): Promise<MatchedGame[]> {
     const results: MatchedGame[] = [];
-    const batchSize = 5;
+    const totalGames = games.length;
 
-    for (let i = 0; i < games.length; i += batchSize) {
-        const batch = games.slice(i, i + batchSize);
-        const batchResults = await Promise.all(batch.map(async (game) => {
-            const match = await findMatch(game.name, game);
-            const igdbMatch = match?.igdb_match;
+    // Process one game at a time for more granular updates
+    for (let i = 0; i < games.length; i++) {
+        const game = games[i];
+        
+        if (userId) {
+            sendUpdate(userId, {
+                type: 'progress',
+                current: i + 1,
+                total: totalGames
+            });
+        }
 
-            if (!igdbMatch) {
-                console.log(`No IGDB match found for: ${game.name}`);
-                return {
-                    ...game,
-                    igdb_id: 0,
-                    cover_url: null,
-                    year: null,
-                    description: null,
-                    slug: '',
-                    matched: false
-                } as MatchedGame;
-            }
+        const match = await findMatch(game.name, game);
+        if (userId) {
+            sendUpdate(userId, {
+                type: 'match',
+                game: game.name,
+                matched: !!match?.igdb_match
+            });
+        }
 
+        const igdbMatch = match?.igdb_match;
+        let matchedGame: MatchedGame;
+
+        if (!igdbMatch) {
+            console.log(`No IGDB match found for: ${game.name}`);
+            matchedGame = {
+                ...game,
+                igdb_id: 0,
+                cover_url: null,
+                year: null,
+                description: null,
+                slug: '',
+                matched: false
+            } as MatchedGame;
+        } else {
             // Log the full IGDB match data for debugging
             console.log(`IGDB match data for ${game.name}:`, JSON.stringify(igdbMatch, null, 2));
 
-            const matchedGame: MatchedGame = {
+            matchedGame = {
                 ...game,
                 igdb_id: igdbMatch.id,
                 cover_url: match?.cover_url ?? null,
@@ -492,47 +556,27 @@ async function matchGames(games: SteamGame[]): Promise<MatchedGame[]> {
                 description: igdbMatch.summary ?? null,
                 slug: igdbMatch.slug ?? '',
                 matched: true,
-                
-                // Basic ratings
                 rating: igdbMatch.rating ?? null,
                 total_rating: igdbMatch.total_rating ?? null,
                 rating_count: igdbMatch.rating_count ?? null,
                 total_rating_count: igdbMatch.total_rating_count ?? null,
-                
-                // Arrays of objects
                 genres: igdbMatch.genres ?? null,
                 platforms: igdbMatch.platforms ?? null,
                 themes: igdbMatch.themes ?? null,
                 game_modes: igdbMatch.game_modes ?? null,
-                
-                // Company information
                 involved_companies: igdbMatch.involved_companies ?? null,
-                
-                // Additional ratings
                 aggregated_rating: igdbMatch.aggregated_rating ?? null,
                 aggregated_rating_count: igdbMatch.aggregated_rating_count ?? null,
-                
-                // Release information
                 first_release_date: igdbMatch.first_release_date ? new Date(igdbMatch.first_release_date * 1000).toISOString() : null,
                 category: igdbMatch.category ?? null,
-                
-                // Text fields
                 storyline: igdbMatch.storyline ?? null,
                 version_title: igdbMatch.version_title ?? null,
                 version_parent: igdbMatch.version_parent ?? null,
-                
-                // Franchise information
                 franchise: igdbMatch.franchises?.[0]?.name ?? null,
                 franchise_id: igdbMatch.franchises?.[0]?.id ?? null,
-                
-                // Social metrics
                 hypes: igdbMatch.hypes ?? null,
                 follows: igdbMatch.follows ?? null,
-                
-                // URLs and external links
                 url: igdbMatch.url ?? null,
-                
-                // Additional game information
                 game_engines: igdbMatch.game_engines ?? null,
                 alternative_names: igdbMatch.alternative_names ?? null,
                 collection: igdbMatch.collection ?? null,
@@ -540,12 +584,8 @@ async function matchGames(games: SteamGame[]): Promise<MatchedGame[]> {
                 expansions: igdbMatch.expansions ?? null,
                 parent_game: igdbMatch.parent_game ?? null,
                 game_bundle: igdbMatch.category === 3,
-                
-                // Gameplay information
                 multiplayer_modes: igdbMatch.multiplayer_modes ?? null,
                 release_dates: igdbMatch.release_dates ?? null,
-                
-                // Media
                 screenshots: igdbMatch.screenshots?.map(s => ({
                     ...s,
                     url: s.url ? (s.url.startsWith('http') ? s.url : `https:${s.url}`) : s.image_id
@@ -553,35 +593,37 @@ async function matchGames(games: SteamGame[]): Promise<MatchedGame[]> {
                 similar_games: igdbMatch.similar_games ?? null,
                 videos: igdbMatch.videos ?? null,
                 websites: igdbMatch.websites ?? null,
-                
-                // Additional details
                 player_perspectives: igdbMatch.player_perspectives ?? null,
                 language_supports: igdbMatch.language_supports ?? null
             };
-
-            // Log the final matched game object for debugging
-            console.log(`Final matched game data for ${game.name}:`, JSON.stringify(matchedGame, null, 2));
-
-            return matchedGame;
-        }));
-        
-        results.push(...batchResults);
-        if (i + batchSize < games.length) {
-            await delay(1000);
         }
+        
+        results.push(matchedGame);
+        
+        // Small delay between games to prevent rate limiting
+        await delay(200);
+    }
+    
+    if (userId) {
+        sendUpdate(userId, {
+            type: 'complete',
+            message: 'Matching complete',
+            matchedCount: results.filter(g => g.matched).length,
+            totalCount: totalGames
+        });
     }
     
     return results;
 }
 
-// Fix the route handler
+// Update the /match route to accept userId
 router.post('/match', async (req: RequestWithGames, res: Response) => {
     try {
-        const { games } = req.body;
+        const { games, userId } = req.body;
         if (!Array.isArray(games)) {
             throw new Error('Invalid request: games must be an array');
         }
-        const matches = await matchGames(games);
+        const matches = await matchGames(games, userId);
         res.json(matches);
     } catch (error) {
         console.error('Error matching games:', error);
