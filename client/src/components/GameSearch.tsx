@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { searchgames, getTrendinggames } from '../services/igdb';
 import { useMutation, useApolloClient } from '@apollo/client';
-import { CREATE_GAME, CREATE_GAME_PROGRESS, GET_GAME_COLLECTION, CHECK_GAME_PROGRESS } from '../gql';
-import { IGDBGame, GameProgressData } from '../types';
+import { CREATE_GAME, CREATE_GAME_PROGRESS, CHECK_GAME_PROGRESS } from '../gql';
+import { IGDBGame } from '../types';
 import { GameSearchProps, GameSearchCardProps } from '../types/props';
 import { useAuth } from '../context/AuthContext';
 import GameAddNotification from './GameAddNotification';
@@ -197,34 +197,24 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
 
     const [addGame] = useMutation(CREATE_GAME);
     const [addGameProgress] = useMutation(CREATE_GAME_PROGRESS, {
-        variables: {
-            userId: user?.id,
-            status: 'not_started'
-        },
-        update(cache, { data: { insert_game_progress_one } }) {
-            const existingData = cache.readQuery<GameProgressData>({
-                query: GET_GAME_COLLECTION,
-                variables: { 
-                    userId: user?.id,
-                    orderBy: [{ status: 'asc' }]
-                }
-            });
-
-            if (existingData) {
+        update(cache, { data }) {
+            if (data?.insert_game_progress_one) {
+                // Update the cache for CHECK_GAME_PROGRESS
                 cache.writeQuery({
-                    query: GET_GAME_COLLECTION,
-                    variables: { 
+                    query: CHECK_GAME_PROGRESS,
+                    variables: {
                         userId: user?.id,
-                        orderBy: [{ status: 'asc' }]
+                        igdbId: addingGame?.id
                     },
                     data: {
-                        game_progress: [...existingData.game_progress, insert_game_progress_one]
+                        game_progress: [{
+                            id: data.insert_game_progress_one.id,
+                            game_id: data.insert_game_progress_one.game_id,
+                            __typename: 'game_progress'
+                        }]
                     }
                 });
             }
-        },
-        onError: (error) => {
-            setError(`Failed to add game progress: ${error.message}`);
         }
     });
 
@@ -285,75 +275,90 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
         
         setAddingGame(game);
         setAddStatus('adding');
-        
+
         try {
-            const { data: gameData } = await addGame({
+            // Check if game already exists in collection
+            const { data: existingProgress } = await client.query({
+                query: CHECK_GAME_PROGRESS,
                 variables: {
-                    name: game.name,
-                    description: game.summary,
-                    year: game.first_release_date ? new Date(game.first_release_date * 1000).getFullYear() : null,
-                    cover_url: game.cover?.url.replace('t_thumb', 't_cover_big'),
-                    slug: game.slug,
-                    igdb_id: game.id,
-                    rating: game.rating,
-                    total_rating: game.total_rating,
-                    rating_count: game.rating_count,
-                    total_rating_count: game.total_rating_count,
-                    genres: game.genres,
-                    platforms: game.platforms,
-                    themes: game.themes,
-                    game_modes: game.game_modes,
-                    involved_companies: game.involved_companies,
-                    aggregated_rating: game.aggregated_rating,
-                    aggregated_rating_count: game.aggregated_rating_count,
-                    category: game.category,
-                    storyline: game.storyline,
-                    version_title: game.version_title,
-                    version_parent: game.version_parent,
-                    franchise: game.franchise,
-                    franchise_id: game.franchise_id,
-                    hypes: game.hypes,
-                    follows: game.follows,
-                    total_follows: game.total_follows,
-                    url: game.url,
-                    game_engines: game.game_engines,
-                    alternative_names: game.alternative_names,
-                    collection: game.collection,
-                    dlcs: game.dlcs,
-                    expansions: game.expansions,
-                    parent_game: game.parent_game,
-                    game_bundle: game.game_bundle,
-                    multiplayer_modes: game.multiplayer_modes,
-                    release_dates: game.release_dates,
-                    screenshots: game.screenshots,
-                    similar_games: game.similar_games,
-                    videos: game.videos,
-                    websites: game.websites,
-                    player_perspectives: game.player_perspectives,
-                    language_supports: game.language_supports
+                    userId: user.id,
+                    igdbId: game.id
                 }
             });
 
-            // Check if the game exists in the user's game_progress
-            const { data: progressData } = await client.query({
-                query: CHECK_GAME_PROGRESS,
-                variables: { 
-                    userId: user.id,
-                    gameId: gameData.insert_games_one.id
-                },
-                fetchPolicy: 'network-only' // Force a fresh check from the server
-            });
-
-            if (progressData.game_progress.length > 0) {
+            if (existingProgress.game_progress.length > 0) {
                 setAddStatus('exists');
+                setTimeout(() => {
+                    setAddingGame(null);
+                    setAddStatus(null);
+                }, 3000);
                 return;
             }
 
+            // Transform cover URL to get full size image
+            const coverUrl = game.cover?.url ? 
+                game.cover.url.replace('t_thumb', 't_cover_big') : null;
+
+            // Create game if it doesn't exist
+            const releaseDate = game.first_release_date ? 
+                new Date(game.first_release_date * 1000).toISOString() : null;
+            
+            const { data: gameData } = await addGame({
+                variables: {
+                    name: game.name,
+                    description: game.summary || game.storyline,
+                    first_release_date: releaseDate,
+                    year: game.first_release_date ? new Date(game.first_release_date * 1000).getFullYear() : null,
+                    igdb_id: game.id,
+                    slug: game.slug,
+                    cover_url: coverUrl,
+                    rating: game.rating || null,
+                    total_rating: game.total_rating || null,
+                    rating_count: game.rating_count || null,
+                    total_rating_count: game.total_rating_count || null,
+                    aggregated_rating: game.aggregated_rating || null,
+                    aggregated_rating_count: game.aggregated_rating_count || null,
+                    genres: game.genres || null,
+                    platforms: game.platforms || null,
+                    themes: game.themes || null,
+                    game_modes: game.game_modes || null,
+                    involved_companies: game.involved_companies || null,
+                    category: game.category || null,
+                    storyline: game.storyline || null,
+                    version_title: game.version_title || null,
+                    version_parent: game.version_parent || null,
+                    franchise: game.franchise || null,
+                    franchise_id: game.franchise_id || null,
+                    hypes: game.hypes || null,
+                    follows: game.follows || null,
+                    total_follows: game.total_follows || null,
+                    url: game.url || null,
+                    game_engines: game.game_engines || null,
+                    alternative_names: game.alternative_names || null,
+                    collection: game.collection || null,
+                    dlcs: game.dlcs || null,
+                    expansions: game.expansions || null,
+                    parent_game: game.parent_game || null,
+                    game_bundle: game.game_bundle || null,
+                    multiplayer_modes: game.multiplayer_modes || null,
+                    release_dates: game.release_dates || null,
+                    screenshots: game.screenshots || null,
+                    similar_games: game.similar_games || null,
+                    videos: game.videos || null,
+                    websites: game.websites || null,
+                    player_perspectives: game.player_perspectives || null,
+                    language_supports: game.language_supports || null
+                }
+            });
+
+            // Add game progress with the correct variables
             await addGameProgress({
                 variables: {
                     userId: user.id,
                     gameId: gameData.insert_games_one.id,
-                    status: 'not_started'
+                    status: 'not_started',
+                    playtimeMinutes: 0,
+                    lastPlayed: null
                 }
             });
 
@@ -361,11 +366,15 @@ const GameSearch: React.FC<GameSearchProps> = ({ onGameSelect }) => {
             if (onGameSelect) {
                 onGameSelect(gameData.insert_games_one);
             }
+            setTimeout(() => {
+                setAddingGame(null);
+                setAddStatus(null);
+            }, 3000);
         } catch (error) {
             console.error('Error adding game:', error);
-            setError(`Failed to add game: ${error.message}`);
-            setAddingGame(null);
+            setError('Failed to add game to collection');
             setAddStatus(null);
+            setAddingGame(null);
         }
     };
 

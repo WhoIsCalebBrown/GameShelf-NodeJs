@@ -4,6 +4,47 @@ import fetch from 'node-fetch';
 const router = express.Router();
 const IGDB_ENDPOINT = 'https://api.igdb.com/v4';
 
+const GAME_FIELDS = `
+    fields name,
+          summary,
+          first_release_date,
+          cover.*,
+          slug,
+          id,
+          rating,
+          total_rating,
+          rating_count,
+          total_rating_count,
+          game_modes.*,
+          genres.*,
+          platforms.*,
+          themes.*,
+          involved_companies.company.name,
+          involved_companies.developer,
+          involved_companies.publisher,
+          aggregated_rating,
+          aggregated_rating_count,
+          category,
+          storyline,
+          franchises.*,
+          hypes,
+          url,
+          game_engines.*,
+          alternative_names.*,
+          collection,
+          dlcs,
+          expansions,
+          parent_game,
+          multiplayer_modes.*,
+          release_dates.*,
+          screenshots.*,
+          similar_games.*,
+          videos.*,
+          websites.*,
+          player_perspectives.*,
+          language_supports.*;
+`;
+
 router.post('/search', async (req, res) => {
     try {
         const { searchTerm } = req.body;
@@ -19,51 +60,7 @@ router.post('/search', async (req, res) => {
             },
             body: `
                 search "${searchTerm}";
-                fields name,
-                      summary,
-                      first_release_date,
-                      cover.*,
-                      slug,
-                      id,
-                      rating,
-                      total_rating,
-                      rating_count,
-                      total_rating_count,
-                      game_modes.*,
-                      genres.*,
-                      platforms.*,
-                      themes.*,
-                      involved_companies.company.name,
-                      involved_companies.developer,
-                      involved_companies.publisher,
-                      aggregated_rating,
-                      aggregated_rating_count,
-                      category,
-                      status,
-                      storyline,
-                      version_title,
-                      version_parent,
-                      franchise,
-                      franchise_id,
-                      hypes,
-                      follows,
-                      total_follows,
-                      url,
-                      game_engines.*,
-                      alternative_names.*,
-                      collection.*,
-                      dlcs.*,
-                      expansions.*,
-                      parent_game,
-                      game_bundle,
-                      multiplayer_modes.*,
-                      release_dates.*,
-                      screenshots.*,
-                      similar_games.*,
-                      videos.*,
-                      websites.*,
-                      player_perspectives.*,
-                      language_supports.*;
+                ${GAME_FIELDS}
                 limit 20;
             `
         });
@@ -123,7 +120,7 @@ router.get('/trending', async (req, res) => {
                 'Content-Type': 'text/plain'
             },
             body: `
-                fields name,summary,first_release_date,cover.*,slug,id,rating,total_rating,game_modes,themes,category;
+                ${GAME_FIELDS}
                 where id = (${gameIdsString}) & 
                       category = 0 &
                       total_rating >= 75;

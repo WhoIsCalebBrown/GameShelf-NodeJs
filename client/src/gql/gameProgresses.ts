@@ -32,12 +32,13 @@ export const GET_GAME_COLLECTION = gql`
 `;
 
 export const CHECK_GAME_PROGRESS = gql`
-    query CheckGameProgress($userId: Int!, $gameId: Int!) {
+    query CheckGameProgress($userId: Int!, $igdbId: Int!) {
         game_progress(where: {
             user_id: { _eq: $userId },
-            game_id: { _eq: $gameId }
+            game: { igdb_id: { _eq: $igdbId } }
         }) {
             id
+            game_id
         }
     }
 `;
