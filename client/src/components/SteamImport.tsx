@@ -24,6 +24,7 @@ const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSte
     const [currentStatus, setCurrentStatus] = useState<string>('');
     const [matchingStatus, setMatchingStatus] = useState<string>('');
     const [importStatus, setImportStatus] = useState<string>('');
+    const [hasAutoImported, setHasAutoImported] = useState(false);
 
     const [bulkAddGames] = useMutation(CREATE_BULK_GAMES);
     const [bulkAddGameProgress] = useMutation(CREATE_BULK_GAME_PROGRESSES, {
@@ -277,10 +278,11 @@ const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSte
     };
 
     useEffect(() => {
-        if (autoImport && defaultSteamId && !isImporting) {
+        if (autoImport && defaultSteamId && !isImporting && !hasAutoImported) {
+            setHasAutoImported(true);
             handleFetchGames();
         }
-    }, [autoImport, defaultSteamId, handleFetchGames, isImporting]);
+    }, [autoImport, defaultSteamId, handleFetchGames, isImporting, hasAutoImported]);
 
     return (
         <div className="bg-dark p-6 rounded-lg mb-6">
@@ -297,7 +299,14 @@ const SteamImport: React.FC<SteamImportProps> = ({autoImport = false, defaultSte
                     <button
                         onClick={handleFetchGames}
                         disabled={isLoading || !steamId}
-                        className="px-4 py-2 bg-primary-500 text-white rounded-lg disabled:opacity-50"
+                        className={`
+                            px-4 py-2 rounded-lg font-medium
+                            ${isLoading || !steamId
+                                ? 'bg-gray-600 cursor-not-allowed'
+                                : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg'
+                            }
+                            text-white transition-all duration-200
+                        `}
                     >
                         {isLoading ? 'Fetching...' : 'Fetch Games'}
                     </button>

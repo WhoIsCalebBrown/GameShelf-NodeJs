@@ -17,6 +17,7 @@ export interface Game {
     current_rank?: string;
     peak_rank?: string;
     is_favorite?: boolean;
+    genres?: Array<{ id: number; name: string; }>;
 }
 
 export interface IGDBGame {

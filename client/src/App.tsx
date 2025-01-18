@@ -7,6 +7,7 @@ import GameCollection from './components/GameCollection';
 import Login from './components/Login';
 import Register from './components/Register';
 import SteamCallback from './components/SteamCallback';
+import Stats from './pages/Stats';
 import './animations.css';
 
 interface ProtectedRouteProps {
@@ -54,6 +55,12 @@ const Navigation: React.FC = () => {
                                 className="px-4 py-2 rounded-lg hover:bg-primary-500/20 transition-colors"
                             >
                                 My Collection
+                            </a>
+                            <a 
+                                href="/stats" 
+                                className="px-4 py-2 rounded-lg hover:bg-primary-500/20 transition-colors"
+                            >
+                                Stats
                             </a>
                         </div>
                     )}
@@ -116,6 +123,14 @@ const App: React.FC = () => {
                                 element={
                                     <ProtectedRoute>
                                         <GameCollection />
+                                    </ProtectedRoute>
+                                } 
+                            />
+                            <Route 
+                                path="/stats" 
+                                element={
+                                    <ProtectedRoute>
+                                        <Stats />
                                     </ProtectedRoute>
                                 } 
                             />
